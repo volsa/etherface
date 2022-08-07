@@ -99,7 +99,7 @@ const Hash = () => {
         setErrorCode(null);
 
         let response = await axios.get(
-            `${process.env.REST_ADDR}/v1/signatures/hash/${query}/${page}`, {
+            `${process.env.ETHERFACE_REST_ADDRESS}/v1/signatures/hash/${query}/${page}`, {
             validateStatus: null // https://axios-http.com/docs/req_config
         }
         );
@@ -133,7 +133,7 @@ const Hash = () => {
     const fetcherGithubEndpoint = async (query: string, page: number) => {
         setErrorCode(null);
         let response = await axios.get(
-            `${process.env.REST_ADDR}/v1/sources/github/${query}/${page}`, {
+            `${process.env.ETHERFACE_REST_ADDRESS}/v1/sources/github/${query}/${page}`, {
             validateStatus: null // https://axios-http.com/docs/req_config
         }
         );
@@ -156,7 +156,7 @@ const Hash = () => {
     const fetcherEtherscanEndpoint = async (query: string, page: number) => {
         setErrorCode(null);
         let response = await axios.get(
-            `${process.env.REST_ADDR}/v1/sources/etherscan/${query}/${page}`, {
+            `${process.env.ETHERFACE_REST_ADDRESS}/v1/sources/etherscan/${query}/${page}`, {
             validateStatus: null // https://axios-http.com/docs/req_config
         }
         );

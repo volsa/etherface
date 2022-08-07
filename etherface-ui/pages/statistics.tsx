@@ -12,7 +12,7 @@ const Statistics = () => {
 
     const fetch = async () => {
         let response = await axios.get<Statistics>(
-            `${process.env.REST_ADDR}/v1/statistics`, {
+            `${process.env.ETHERFACE_REST_ADDRESS}/v1/statistics`, {
             validateStatus: null // https://axios-http.com/docs/req_config
         }
         );

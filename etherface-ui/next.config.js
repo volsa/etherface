@@ -4,7 +4,7 @@ module.exports = {
   swcMinify: true,
 
   env: {
-    REST_ADDR: process.env.ETHERFACE_REST_ADDRESS
+    ETHERFACE_REST_ADDRESS: process.env.ETHERFACE_REST_ADDRESS
   },
 
   // Redirect any request from "/" to "/hash"

@@ -47,7 +47,7 @@ const Text = () => {
         setErrorCode(null)
 
         let response = await axios.get(
-            `${process.env.REST_ADDR}/v1/signatures/text/${queryKind}/${query}/${page}`, {
+            `${process.env.ETHERFACE_REST_ADDRESS}/v1/signatures/text/${queryKind}/${query}/${page}`, {
             validateStatus: null // https://axios-http.com/docs/req_config
         }
         );
