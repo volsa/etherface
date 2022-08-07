@@ -15,6 +15,17 @@ const ENV_VAR_TOKEN_ETHERSCAN: &str = "ETHERFACE_TOKEN_ETHERSCAN";
 const ENV_VAR_TOKENS_GITHUB: &str = "ETHERFACE_TOKENS_GITHUB";
 const ENV_VAR_REST_ADDRESS: &str = "ETHERFACE_REST_ADDRESS";
 
+#[inline]
+fn read_and_return_env_var(env_var: &'static str) -> Result<String, Error> {
+    let res = std::env::var(env_var)
+        .map_err(|err| Error::ConfigReadNonExistantEnvironmentVariable(env_var, err))?;
+
+    match res.is_empty() {
+        true => Err(Error::ConfigReadEmptyEnvironmentVariable(env_var)),
+        false => Ok(res),
+    }
+}
+
 impl Config {
     pub fn new() -> Result<Self, Error> {
         match Path::new(".env").exists() {
@@ -22,11 +33,9 @@ impl Config {
             false => dotenv::from_filename("../.env")?, // If executed within a sub-directory
         };
 
-        let database_url = std::env::var(ENV_VAR_DATABASE_URL)
-            .map_err(|err| Error::ConfigReadNonExistantEnvironmentVariable(ENV_VAR_DATABASE_URL, err))?;
-
-        let token_etherscan = std::env::var(ENV_VAR_TOKEN_ETHERSCAN)
-            .map_err(|err| Error::ConfigReadNonExistantEnvironmentVariable(ENV_VAR_TOKEN_ETHERSCAN, err))?;
+        let database_url = read_and_return_env_var(ENV_VAR_DATABASE_URL)?;
+        let token_etherscan = read_and_return_env_var(ENV_VAR_TOKEN_ETHERSCAN)?;
+        let rest_address = read_and_return_env_var(ENV_VAR_REST_ADDRESS)?;
 
         let tokens_github = std::env::var(ENV_VAR_TOKENS_GITHUB)
             .map_err(|err| Error::ConfigReadNonExistantEnvironmentVariable(ENV_VAR_TOKENS_GITHUB, err))?
@@ -34,23 +43,8 @@ impl Config {
             .map(str::to_string)
             .collect::<Vec<String>>();
 
-        let rest_address = std::env::var(ENV_VAR_TOKEN_ETHERSCAN)
-            .map_err(|err| Error::ConfigReadNonExistantEnvironmentVariable(ENV_VAR_TOKEN_ETHERSCAN, err))?;
-
-        if database_url.is_empty() {
-            return Err(Error::ConfigReadEmptyEnvironmentVariable(ENV_VAR_DATABASE_URL));
-        }
-
-        if token_etherscan.is_empty() {
-            return Err(Error::ConfigReadEmptyEnvironmentVariable(ENV_VAR_TOKEN_ETHERSCAN));
-        }
-
         if tokens_github.is_empty() {
             return Err(Error::ConfigReadEmptyEnvironmentVariable(ENV_VAR_TOKENS_GITHUB));
-        }
-
-        if rest_address.is_empty() {
-            return Err(Error::ConfigReadEmptyEnvironmentVariable(ENV_VAR_REST_ADDRESS));
         }
 
         Ok(Config {
