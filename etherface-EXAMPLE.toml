@@ -1,0 +1,15 @@
+[database]
+host = "localhost"
+dbname = "etherface"
+username = "root"
+password = "root"
+
+[github]
+tokens = [
+    "GITHUB_TOKEN_01",
+    "GITHUB_TOKEN_02",
+    "GITHUB_TOKEN_03",
+]
+
+[etherscan]
+token = "ETHERSCAN_TOKEN"

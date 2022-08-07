@@ -1,0 +1,6 @@
+unstable_features = true
+
+max_width = 110
+fn_call_width = 110
+chain_width = 110
+imports_granularity = "Item"
