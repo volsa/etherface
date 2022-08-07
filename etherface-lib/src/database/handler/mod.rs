@@ -38,7 +38,7 @@ impl DatabaseClientPooled {
     pub fn new() -> Result<Self, Error> {
         // TODO: https://docs.diesel.rs/diesel/r2d2/struct.Builder.html
         let config = Config::new()?;
-        let manager = diesel::r2d2::ConnectionManager::<PgConnection>::new(&config.get_database_url());
+        let manager = diesel::r2d2::ConnectionManager::<PgConnection>::new(&config.database_url);
         let pool = diesel::r2d2::Pool::builder().build(manager).unwrap();
 
         Ok(DatabaseClientPooled { connection: pool })
@@ -54,7 +54,7 @@ impl DatabaseClient {
         let config = Config::new()?;
 
         Ok(DatabaseClient {
-            connection: PgConnection::establish(&config.get_database_url())?,
+            connection: PgConnection::establish(&config.database_url)?,
         })
     }
 

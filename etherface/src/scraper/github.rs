@@ -25,13 +25,14 @@ enum FileKind {
     Json,
 }
 
+const PATH_CLONE_DIR: &str = "/tmp/etherface";
+
 impl Scraper for GithubScraper {
     fn start(&self) -> Result<(), Error> {
         let ghc = GithubClient::new()?;
         let dbc = DatabaseClient::new()?;
 
-        std::fs::create_dir_all("/tmp/etherface")?;
-        std::env::set_current_dir("/tmp/etherface")?;
+        std::fs::create_dir_all(PATH_CLONE_DIR)?;
 
         loop {
             println!("Scraping Job-Queue: {}", dbc.github_repository().get_unscraped_with_forks().len());
@@ -45,7 +46,7 @@ impl Scraper for GithubScraper {
                 // characters from the name but names with only dashes are also supported. Instead of doing some
                 // fancy magic (a.k.a. supporting edge-cases) we do it the simple and boring way.
                 let mut clone_name = repo.name.replace('-', "_");
-                clone_name = clone_name.replace('.', "_");
+                clone_name = format!("{PATH_CLONE_DIR}/{}", clone_name.replace('.', "_"));
 
                 let git_clone_command = match Command::new("git")
                     .args([
@@ -95,8 +96,6 @@ impl Scraper for GithubScraper {
 
                 println!("Scraping {}", clone_name);
                 for file in get_sol_files(&clone_name) {
-                    let file_path_without_root = file.path.strip_prefix(&format!("{clone_name}/")).unwrap();
-
                     if let Ok(content) = std::fs::read_to_string(&file.path) {
                         let signatures = match file.kind {
                             FileKind::Solidity => parser::from_sol(&content),
@@ -112,7 +111,7 @@ impl Scraper for GithubScraper {
                             let mapping_entity = MappingSignatureGithub {
                                 signature_id: signature_db.id,
                                 repository_id: repo.id,
-                                path: file_path_without_root,
+                                path: "", // TODO: Empty, but will be removed anyways so it's fine
                                 kind: signature.kind,
                                 visibility: signature.visibility,
                                 added_at: Utc::now(),

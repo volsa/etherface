@@ -33,14 +33,17 @@ pub enum Error {
     HttpRequest(#[source] reqwest::Error),
 
     // Config Errors
-    #[error("Failed to read config file 'etherface.toml'; {0}")]
-    ConfigRead(#[from] std::io::Error),
+    #[error("Failed to read .env file; {0}")]
+    ConfigRead(#[from] dotenv::Error),
 
-    #[error("Failed to parse config file 'etherface.toml'; {0}")]
-    ConfigParse(#[from] toml::de::Error),
+    #[error("Environment variable '{0}' does not exist; {1}")]
+    ConfigReadNonExistantEnvironmentVariable(&'static str, #[source] std::env::VarError),
+
+    #[error("Environment variable '{0}' is empty")]
+    ConfigReadEmptyEnvironmentVariable(&'static str),
 
     // Misc Errors
-    #[error("Failed to read enviroment variable '{1}'; {0}")]
+    #[error("Failed to read environment variable '{1}'; {0}")]
     EnvironmentVariableRead(#[source] std::env::VarError, &'static str),
 
     #[error("Failed to connect to database; {0}")]

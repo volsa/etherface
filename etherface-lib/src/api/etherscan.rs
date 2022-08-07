@@ -23,11 +23,9 @@ struct Page {
 
 impl EtherscanClient {
     pub fn new() -> Result<Self, Error> {
-        let config = Config::new()?.etherscan;
-
         Ok(EtherscanClient {
             request_handler: RequestHandler::new(),
-            token: config.token,
+            token: Config::new()?.token_etherscan,
         })
     }
 

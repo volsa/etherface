@@ -19,6 +19,7 @@ select = "*"
 sha3 = "*"
 lazy_static = "*"
 regex = "*"
+dotenv = "0.15.0"
 
 semver = "*"
 lenient_semver = "*"

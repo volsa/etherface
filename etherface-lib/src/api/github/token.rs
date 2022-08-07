@@ -31,7 +31,7 @@ pub(crate) struct TokenManager {
 
 impl TokenManager {
     pub fn new() -> Result<Self, Error> {
-        let tokens = Config::new()?.github.tokens;
+        let tokens = Config::new()?.tokens_github;
 
         let mut manager = TokenManager {
             active: tokens[0].clone(),

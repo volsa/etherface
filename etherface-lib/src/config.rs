@@ -1,60 +1,63 @@
-use crate::error::Error;
-use serde::Deserialize;
 use std::path::Path;
 
-#[derive(Deserialize)]
+use crate::error::Error;
+use dotenv::dotenv;
+
 pub struct Config {
-    pub github: GithubConfig,
-    pub database: DatabaseConfig,
-    pub etherscan: EtherscanConfig,
+    pub database_url: String,
+    pub token_etherscan: String,
+    pub tokens_github: Vec<String>,
+    pub rest_address: String,
 }
 
-#[derive(Deserialize)]
-pub struct GithubConfig {
-    pub tokens: Vec<String>,
-}
-
-#[derive(Deserialize)]
-pub struct DatabaseConfig {
-    pub host: String,
-    pub dbname: String,
-    pub username: String,
-    pub password: String,
-}
-
-#[derive(Deserialize)]
-pub struct EtherscanConfig {
-    pub token: String,
-}
-
-const ENV_CONFIG_PATH: &str = "ETHERFACE_CONFIG_PATH";
-const DEFAULT_CONFIG_PATH: &str = "./etherface.toml";
+const ENV_VAR_DATABASE_URL: &str = "ETHERFACE_DATABASE_URL";
+const ENV_VAR_TOKEN_ETHERSCAN: &str = "ETHERFACE_TOKEN_ETHERSCAN";
+const ENV_VAR_TOKENS_GITHUB: &str = "ETHERFACE_TOKENS_GITHUB";
+const ENV_VAR_REST_ADDRESS: &str = "ETHERFACE_REST_ADDRESS";
 
 impl Config {
     pub fn new() -> Result<Self, Error> {
-        let config_path = match Path::new(DEFAULT_CONFIG_PATH).exists() {
-            true => DEFAULT_CONFIG_PATH.to_string(),
-            false => std::env::var(ENV_CONFIG_PATH)
-                .map_err(|err| Error::EnvironmentVariableRead(err, ENV_CONFIG_PATH))?,
+        match Path::new(".env").exists() {
+            true => dotenv()?,
+            false => dotenv::from_filename("../.env")?, // If executed within a sub-directory
         };
 
-        let content = std::fs::read_to_string(config_path)?;
-        let config: Config = toml::from_str(&content)?;
+        let database_url = std::env::var(ENV_VAR_DATABASE_URL)
+            .map_err(|err| Error::ConfigReadNonExistantEnvironmentVariable(ENV_VAR_DATABASE_URL, err))?;
 
-        if config.github.tokens.is_empty() {
-            return Err(Error::GithubTokenPoolEmpty);
+        let token_etherscan = std::env::var(ENV_VAR_TOKEN_ETHERSCAN)
+            .map_err(|err| Error::ConfigReadNonExistantEnvironmentVariable(ENV_VAR_TOKEN_ETHERSCAN, err))?;
+
+        let tokens_github = std::env::var(ENV_VAR_TOKENS_GITHUB)
+            .map_err(|err| Error::ConfigReadNonExistantEnvironmentVariable(ENV_VAR_TOKENS_GITHUB, err))?
+            .split(',')
+            .map(str::to_string)
+            .collect::<Vec<String>>();
+
+        let rest_address = std::env::var(ENV_VAR_TOKEN_ETHERSCAN)
+            .map_err(|err| Error::ConfigReadNonExistantEnvironmentVariable(ENV_VAR_TOKEN_ETHERSCAN, err))?;
+
+        if database_url.is_empty() {
+            return Err(Error::ConfigReadEmptyEnvironmentVariable(ENV_VAR_DATABASE_URL));
         }
 
-        Ok(config)
-    }
+        if token_etherscan.is_empty() {
+            return Err(Error::ConfigReadEmptyEnvironmentVariable(ENV_VAR_TOKEN_ETHERSCAN));
+        }
 
-    pub fn get_database_url(&self) -> String {
-        format!(
-            "postgres://{username}:{password}@{host}/{dbname}",
-            username = self.database.username,
-            password = self.database.password,
-            host = self.database.host,
-            dbname = self.database.dbname,
-        )
+        if tokens_github.is_empty() {
+            return Err(Error::ConfigReadEmptyEnvironmentVariable(ENV_VAR_TOKENS_GITHUB));
+        }
+
+        if rest_address.is_empty() {
+            return Err(Error::ConfigReadEmptyEnvironmentVariable(ENV_VAR_REST_ADDRESS));
+        }
+
+        Ok(Config {
+            database_url,
+            tokens_github,
+            token_etherscan,
+            rest_address,
+        })
     }
 }
