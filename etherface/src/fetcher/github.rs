@@ -1,3 +1,16 @@
+//! Fetcher for <https://github.com/>
+//!
+//! Fetcher finding repositories with Solidity code by a combination of using the GitHub Search API as well as
+//! focused crawling. This is done with event-threads, where 3 events exist namely [`Event::SearchRepositories`],
+//! [`Event::CheckRepositories`] and [`Event::CheckUsers`]. These events are triggered periodically using
+//! [`start_background_event`] sending a message with `std::sync:mpsc` to the fetchers main-loop.
+//! Within the main-loop either [`GithubCrawler::start_one_crawling_iteration`] is executed or an event if 
+//! triggered. The main-loop, using `std::sync:mpsc`, operates in a FIFO manner meaning events may need to wait
+//! until one crawling iteration / other currently curring event has successfuly terminated.
+//! //! <div align="center">
+//!  <img src="" width="250" height="250"> // TODO: Populate URL
+//! </div>
+
 use chrono::Date;
 use chrono::DateTime;
 use chrono::TimeZone;
@@ -124,6 +137,13 @@ impl GithubCrawler {
         }
     }
 
+    /// Starts one crawling iteration which can be summarised as:
+    /// Check if there are any unvisited Solidity repository owners (GitHub users)
+    ///     Yes => Take the first [`NUM_RESOURCE_VISITS_PER_CRAWLING_ITERATION`] owners from the database and
+    ///            retrieve their owned + starred repositories; set them as visited
+    ///     No  => Take the first [`NUM_RESOURCE_VISITS_PER_CRAWLING_ITERATION`] unvisited repositories from 
+    ///            the database and for each one of them fetch their stargazers; for each fetched stargazer
+    ///            retrieve their owner + starred repositories; set them and the repository as visited
     fn start_one_crawling_iteration(&self) -> Result<(), Error> {
         let unvisited_solidity_repository_owners =
             self.dbc.github_user().get_unvisited_solidity_repository_owners_orderd_by_added_at();
@@ -152,13 +172,13 @@ impl GithubCrawler {
 
                 if unvisited_repos.is_empty() {
                     panic!(
-                        "The crawler is not able to find further repositories if you read this message;
-                        The reason for this is because all repositories yielding function signatures have been
+                        "If you read this message, the crawler is not able to find further repositories;
+                        The reason for this is because all Solidity repositories in our database have been
                         visited. There are a couple of ways to bypass this issue:
                         - Issue an event hoping to find new repositories
                         - Sleep until the next event
                         - Widen the crawlers bubble to not only focus on Solidity repositories / owners, but
-                          we don't want this
+                          we don't want this as we would get a lot of garbage input
                         - ...
                         We could also use the time to check if our local data needs to be updated to mirror
                         GitHub's state."

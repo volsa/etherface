@@ -1,3 +1,12 @@
+//! Scraper for <https://github.com/>
+//!
+//! Fetches all unscraped GitHub repositories from the database, clones them onto the local filesystem finding
+//! all files ending in `.{sol,json,abi}` scraping their signatures from them before deleting the repository.
+//! These extracted signatures are then inserted into the database with a reference to the given GitHub
+//! repository, marking the repository as scraped. The whole process is then repeated every
+//! [`SCRAPER_SLEEP_DURATION`] seconds.
+
+use crate::scraper::SCRAPER_SLEEP_DURATION;
 use crate::scraper::Scraper;
 use anyhow::Error;
 use chrono::Utc;
@@ -15,16 +24,19 @@ use walkdir::WalkDir;
 #[derive(Debug)]
 pub struct GithubScraper;
 
+/// File with potential signatures.
 struct File {
     path: String,
     kind: FileKind,
 }
 
+/// Either a file with Solidity source code or ABI content.
 enum FileKind {
     Solidity,
     Json,
 }
 
+/// Path where repositories are cloned to.
 const PATH_CLONE_DIR: &str = "/tmp/etherface";
 
 impl Scraper for GithubScraper {
@@ -122,12 +134,11 @@ impl Scraper for GithubScraper {
 
                 dbc.github_repository().set_scraped(repo.id);
                 std::fs::remove_dir_all(clone_name)?;
-                // sleep(std::time::Duration::from_secs(3));
             }
 
             // Sleep 5 minutes between each iteration
             println!("Done scraping, sleeping 5 minutes");
-            sleep(std::time::Duration::from_secs(5 * 60));
+            sleep(std::time::Duration::from_secs(SCRAPER_SLEEP_DURATION));
         }
     }
 }
