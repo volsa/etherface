@@ -85,14 +85,13 @@ const Statistics = () => {
                         </div>
 
                         <div className='text-center'>
-                            <span>Most popular signatures found on GitHub</span>
                             <div className="mt-1 text-gray-500 overflow-x-auto relative border rounded mb-8">
                                 <table className="w-full text-sm text-left text-gray-500">
                                     <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                                         <tr>
                                             <th className='py-2 px-4'>Rank</th>
                                             <th className='py-2 px-4'>Signature</th>
-                                            <th className='py-2 px-4'>Scrape Count (includes duplicates)</th>
+                                            <th className='py-2 px-4'>GitHub Scrape Count</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -100,7 +99,7 @@ const Statistics = () => {
                                             <tr key={item.text} className="bg-white border-b hover:bg-gray-50">
                                                 <td className='py-2 px-4'>{idx + 1}</td>
                                                 <td className='py-2 px-4'>{item.text}</td>
-                                                <td className='py-2 px-4'>{item.count}</td>
+                                                <td className='py-2 px-4'>{item.count.toLocaleString().replaceAll(',', '.')}</td>
                                             </tr>
                                         ))}
                                     </tbody>
