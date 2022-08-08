@@ -58,7 +58,7 @@ impl EtherscanClient {
                     compiler: row_column[2].trim().to_string(),
                     compiler_version: row_column[3].trim().to_string(),
                     url: format!("https://etherscan.io/address/{}", row_column[0].trim()).to_string(),
-                    visited_at: None,
+                    scraped_at: None,
                     added_at: Utc::now(),
                 });
             }

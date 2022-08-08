@@ -60,7 +60,7 @@ CREATE TABLE etherscan_contract (
     compiler            TEXT                        NOT NULL,
     compiler_version    TEXT                        NOT NULL,
     url                 TEXT                        NOT NULL,
-    visited_at          TIMESTAMP WITH TIME ZONE,
+    scraped_at          TIMESTAMP WITH TIME ZONE,
 
     -- The following fields are not part of the official API response
     added_at            TIMESTAMP WITH TIME ZONE    NOT NULL,

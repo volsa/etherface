@@ -145,7 +145,7 @@ pub struct EtherscanContract {
     pub compiler: String,
     pub compiler_version: String,
     pub url: String,
-    pub visited_at: Option<DateTime<Utc>>,
+    pub scraped_at: Option<DateTime<Utc>>,
     pub added_at: DateTime<Utc>,
 }
 

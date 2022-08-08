@@ -30,12 +30,12 @@ impl<'a> EtherscanContractHandler<'a> {
     }
 
     pub fn get_unvisited(&self) -> Vec<EtherscanContract> {
-        etherscan_contract.filter(visited_at.is_null()).get_results(self.connection).unwrap()
+        etherscan_contract.filter(scraped_at.is_null()).get_results(self.connection).unwrap()
     }
 
     pub fn set_visited(&self, entity: &EtherscanContract) {
         diesel::update(etherscan_contract.filter(address.eq(&entity.address)))
-            .set(visited_at.eq(Utc::now()))
+            .set(scraped_at.eq(Utc::now()))
             .execute(self.connection)
             .unwrap();
     }

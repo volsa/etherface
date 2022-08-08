@@ -9,7 +9,7 @@ table! {
         compiler -> Text,
         compiler_version -> Text,
         url -> Text,
-        visited_at -> Nullable<Timestamptz>,
+        scraped_at -> Nullable<Timestamptz>,
         added_at -> Timestamptz,
     }
 }
