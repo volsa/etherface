@@ -112,7 +112,6 @@ impl Scraper for GithubScraper {
                                 signature_id: signature_db.id,
                                 repository_id: repo.id,
                                 kind: signature.kind,
-                                visibility: signature.visibility,
                                 added_at: Utc::now(),
                             };
 

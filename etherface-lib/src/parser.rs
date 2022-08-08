@@ -1,18 +1,16 @@
 use crate::error::Error;
 use crate::model::SignatureKind;
-use crate::model::SignatureVisibility;
 use crate::model::SignatureWithMetadata;
 use lazy_static::lazy_static;
 use regex::Regex;
 use regex::RegexBuilder;
-use semver::Version;
 use serde::Deserialize;
-use std::str::FromStr;
 
 #[derive(Deserialize)]
 struct Abi {
     pub name: Option<String>,
     pub inputs: Option<Vec<AbiParameter>>,
+
     #[serde(rename = "type")]
     pub kind: SignatureKind,
 }
@@ -21,36 +19,6 @@ struct Abi {
 struct AbiParameter {
     #[serde(rename = "type")]
     type_: String,
-}
-
-// https://semver.npmjs.com/
-#[derive(Debug, PartialEq, Eq)]
-enum Condition {
-    GreaterThan,
-    GreaterThanOrEqual,
-    LessThan,
-    LessThanOrEqual,
-    Equals,
-    Caret, // '^' Token
-    Tilde,
-}
-
-impl FromStr for Condition {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            ">" => Ok(Condition::GreaterThan),
-            ">=" => Ok(Condition::GreaterThanOrEqual),
-            "<" => Ok(Condition::LessThan),
-            "<=" => Ok(Condition::LessThanOrEqual),
-            "=" => Ok(Condition::Equals),
-            "^" => Ok(Condition::Caret),
-            "~" => Ok(Condition::Tilde),
-
-            _ => Err(()),
-        }
-    }
 }
 
 lazy_static! {
@@ -159,23 +127,7 @@ pub fn from_abi(content: &str) -> Result<Vec<SignatureWithMetadata>, Error> {
                 .join(",")
         );
 
-        let visibility = match kind {
-            // ABIs don't carry any visibility information but only public and external functions are included
-            // as such we can assume it's public
-            SignatureKind::Function => SignatureVisibility::Public,
-
-            // Event and error definitions do not have any visibility, see the official language grammar:
-            // https://docs.soliditylang.org/en/v0.8.13/grammar.html#a4.SolidityParser.eventDefinition and
-            // https://docs.soliditylang.org/en/v0.8.13/grammar.html#a4.SolidityParser.errorDefinition
-            // NOTE: For the sake of our database model (visibility is a primary key), however, we auto assign
-            // a visibility of public here; This should be safe / OK because events and errors are always
-            // included in ABI JSON files.
-            SignatureKind::Event | SignatureKind::Error => SignatureVisibility::Public,
-
-            _ => unreachable!("Unreachable due to previous if kind != {{Function, Event, Error}} check."),
-        };
-
-        signatures.push(SignatureWithMetadata::new(text, kind, visibility));
+        signatures.push(SignatureWithMetadata::new(text, kind));
     }
 
     Ok(signatures)
@@ -195,37 +147,7 @@ pub fn from_sol(content: &str) -> Vec<SignatureWithMetadata> {
 
         let text = format!("{}({})", name, get_joined_parameter_types(params));
 
-        let visibility = match kind {
-            SignatureKind::Function => match capture.name("visibility") {
-                Some(val) => val.as_str().parse::<SignatureVisibility>().unwrap(),
-                None => match can_assign_public_visibility(content) {
-                    Ok(val) => match val {
-                        true => SignatureVisibility::Public,
-                        false => continue,
-                    },
-
-                    Err(_why) => {
-                        // TODO: log
-                        continue;
-                    }
-                },
-            },
-
-            // Event- and Error-Definitions do not have any visibility according to the language grammar:
-            // https://docs.soliditylang.org/en/v0.8.11/grammar.html#a4.SolidityParser.eventDefinition and
-            // https://docs.soliditylang.org/en/v0.8.11/grammar.html#a4.SolidityParser.errorDefinition
-            // NOTE: For the sake of our database model (visibility is a primary key), however, we auto assign
-            // a visibility of public here; This should be safe / OK because events and errors are always
-            // included in ABI JSON files.
-            SignatureKind::Event | SignatureKind::Error => SignatureVisibility::Public,
-
-            _ => unreachable!(
-                "The `REGEX_SIGNATURE` pattern only matches against functions, events or errors
-                so this should be unreachable."
-            ),
-        };
-
-        signatures.push(SignatureWithMetadata::new(text, kind, visibility));
+        signatures.push(SignatureWithMetadata::new(text, kind));
     }
 
     signatures
@@ -266,75 +188,10 @@ fn get_joined_parameter_types(raw_parameter_list: &str) -> String {
     }
 }
 
-fn can_assign_public_visibility(content: &str) -> Result<bool, Error> {
-    match REGEX_PRAGMA.captures(content) {
-        Some(capture) => {
-            // The `lhs_version` group must exists, so unwrap should be fine here
-            let lhs_version = lenient_semver::parse(capture.name("lhs_version").unwrap().as_str())
-                .map_err(|why| Error::ParsePragma(why.to_string()))?;
-
-            let lhs_condition = match capture.name("lhs_condition") {
-                Some(val) => val.as_str().parse::<Condition>().unwrap(),
-                None => Condition::Equals, // No condition specified is the same as an equals condition
-            };
-
-            // Check if the `rhs_version` group is present
-            if let Some(rhs_capture) = capture.name("rhs_version") {
-                let rhs_version = lenient_semver::parse(rhs_capture.as_str())
-                    .map_err(|why| Error::ParsePragma(why.to_string()))?;
-
-                let rhs_condition = match capture.name("rhs_condition") {
-                    Some(val) => val.as_str().parse::<Condition>().unwrap(),
-                    None => Condition::Equals, // No condition specified is the same as an equals condition
-                };
-
-                return Ok(can_be_less_than_0_5_0(lhs_version, lhs_condition)
-                    && can_be_less_than_0_5_0(rhs_version, rhs_condition));
-            }
-
-            Ok(can_be_less_than_0_5_0(lhs_version, lhs_condition))
-        }
-
-        // We're a gracious here and assume the given Solidity file is a) valid and b) has been written for
-        // version < 0.5.0; This is in theory also valid because the Solidity compiler supports compiling
-        // files with no `pragma solidity ...` line
-        None => Ok(true),
-    }
-}
-
-#[inline]
-fn can_be_less_than_0_5_0(version: Version, condition: Condition) -> bool {
-    let version_0_4_26 = Version::new(0, 4, 26);
-    let version_0_5 = Version::new(0, 5, 0);
-
-    if condition == Condition::GreaterThan && version >= version_0_4_26 {
-        return false;
-    }
-
-    if condition == Condition::GreaterThanOrEqual && version >= version_0_5 {
-        return false;
-    }
-
-    if condition == Condition::Equals && version > version_0_4_26 {
-        return false;
-    }
-
-    if condition == Condition::Caret && version >= version_0_5 {
-        return false;
-    }
-
-    if condition == Condition::Tilde && version >= version_0_5 {
-        return false;
-    }
-
-    true
-}
-
 #[cfg(test)]
 mod tests {
     use crate::parser;
     use crate::parser::SignatureKind;
-    use crate::parser::SignatureVisibility;
 
     #[test]
     fn from_str_signaturekind() {
@@ -353,21 +210,6 @@ mod tests {
         assert_eq!("Receive".parse::<SignatureKind>(), Ok(SignatureKind::Receive));
 
         assert_eq!("unction".parse::<SignatureKind>(), Err(()));
-    }
-
-    #[test]
-    fn from_str_signaturevisibility() {
-        assert_eq!("public".parse::<SignatureVisibility>(), Ok(SignatureVisibility::Public));
-        assert_eq!("private".parse::<SignatureVisibility>(), Ok(SignatureVisibility::Private));
-        assert_eq!("external".parse::<SignatureVisibility>(), Ok(SignatureVisibility::External));
-        assert_eq!("internal".parse::<SignatureVisibility>(), Ok(SignatureVisibility::Internal));
-
-        assert_eq!("Public".parse::<SignatureVisibility>(), Ok(SignatureVisibility::Public));
-        assert_eq!("Private".parse::<SignatureVisibility>(), Ok(SignatureVisibility::Private));
-        assert_eq!("External".parse::<SignatureVisibility>(), Ok(SignatureVisibility::External));
-        assert_eq!("Internal".parse::<SignatureVisibility>(), Ok(SignatureVisibility::Internal));
-
-        assert_eq!("int3rnal".parse::<SignatureVisibility>(), Err(()));
     }
 
     #[test]
@@ -407,22 +249,22 @@ mod tests {
     fn from_abi_0x8bc61d005443f764d1d0d753f6ec6f9b7eae33b4() {
         #[rustfmt::skip]
         let expected_signatures = vec![
-            ("Initialized()",                                                       SignatureKind::Error,       SignatureVisibility::Public),
-            ("InsufficientPayment()",                                               SignatureKind::Error,       SignatureVisibility::Public),
-            ("NotAuthorized()",                                                     SignatureKind::Error,       SignatureVisibility::Public),
-            ("NotInitialized()",                                                    SignatureKind::Error,       SignatureVisibility::Public),
-            ("NotSlicer()",                                                         SignatureKind::Error,       SignatureVisibility::Public),
-            ("Claimed(address,uint256,uint256)",                                    SignatureKind::Event,       SignatureVisibility::Public),
-            ("SaleClosed(address,uint256)",                                         SignatureKind::Event,       SignatureVisibility::Public),
-            ("_closeSale()",                                                        SignatureKind::Function,    SignatureVisibility::Public),
-            ("_setPrice(uint256)",                                                  SignatureKind::Function,    SignatureVisibility::Public),
-            ("claim(uint256)",                                                      SignatureKind::Function,    SignatureVisibility::Public),
-            ("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)",   SignatureKind::Function,    SignatureVisibility::Public),
-            ("onERC1155Received(address,address,uint256,uint256,bytes)",            SignatureKind::Function,    SignatureVisibility::Public),
-            ("releaseToCollector()",                                                SignatureKind::Function,    SignatureVisibility::Public),
-            ("saleInfo()",                                                          SignatureKind::Function,    SignatureVisibility::Public),
-            ("slicesLeft()",                                                        SignatureKind::Function,    SignatureVisibility::Public),
-            ("supportsInterface(bytes4)",                                           SignatureKind::Function,    SignatureVisibility::Public),
+            ("Initialized()",                                                       SignatureKind::Error),
+            ("InsufficientPayment()",                                               SignatureKind::Error),
+            ("NotAuthorized()",                                                     SignatureKind::Error),
+            ("NotInitialized()",                                                    SignatureKind::Error),
+            ("NotSlicer()",                                                         SignatureKind::Error),
+            ("Claimed(address,uint256,uint256)",                                    SignatureKind::Event),
+            ("SaleClosed(address,uint256)",                                         SignatureKind::Event),
+            ("_closeSale()",                                                        SignatureKind::Function),
+            ("_setPrice(uint256)",                                                  SignatureKind::Function),
+            ("claim(uint256)",                                                      SignatureKind::Function),
+            ("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)",   SignatureKind::Function),
+            ("onERC1155Received(address,address,uint256,uint256,bytes)",            SignatureKind::Function),
+            ("releaseToCollector()",                                                SignatureKind::Function),
+            ("saleInfo()",                                                          SignatureKind::Function),
+            ("slicesLeft()",                                                        SignatureKind::Function),
+            ("supportsInterface(bytes4)",                                           SignatureKind::Function),
         ];
 
         let actual_signatures = parser::from_abi(
@@ -434,7 +276,6 @@ mod tests {
         for (i, actual_signature) in actual_signatures.iter().enumerate() {
             assert_eq!(actual_signature.text, expected_signatures[i].0);
             assert_eq!(actual_signature.kind, expected_signatures[i].1);
-            assert_eq!(actual_signature.visibility, expected_signatures[i].2);
         }
 
         // If the hash is correct for one signature then it must also be correct for all others
@@ -448,95 +289,95 @@ mod tests {
     fn from_sol_0x8bc61d005443f764d1d0d753f6ec6f9b7eae33b4() {
         #[rustfmt::skip]
         let expected_signatures = vec![
-            ("TransferSingle(address,address,address,uint256,uint256)",             SignatureKind::Event,      SignatureVisibility::Public),
-            ("TransferBatch(address,address,address,uint256[],uint256[])",          SignatureKind::Event,      SignatureVisibility::Public),
-            ("ApprovalForAll(address,address,bool)",                                SignatureKind::Event,      SignatureVisibility::Public),
-            ("URI(string,uint256)",                                                 SignatureKind::Event,      SignatureVisibility::Public),
-            ("balanceOf(address,uint256)",                                          SignatureKind::Function,   SignatureVisibility::External),
-            ("balanceOfBatch(address[],uint256[])",                                 SignatureKind::Function,   SignatureVisibility::External),
-            ("setApprovalForAll(address,bool)",                                     SignatureKind::Function,   SignatureVisibility::External),
-            ("isApprovedForAll(address,address)",                                   SignatureKind::Function,   SignatureVisibility::External),
-            ("safeTransferFrom(address,address,uint256,uint256,bytes)",             SignatureKind::Function,   SignatureVisibility::External),
-            ("safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)",    SignatureKind::Function,   SignatureVisibility::External),
-            ("supportsInterface(bytes4)",                                           SignatureKind::Function,   SignatureVisibility::External),
-            ("onERC1155Received(address,address,uint256,uint256,bytes)",            SignatureKind::Function,   SignatureVisibility::External),
-            ("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)",   SignatureKind::Function,   SignatureVisibility::External),
-            ("supportsInterface(bytes4)",                                           SignatureKind::Function,   SignatureVisibility::Public),
-            ("Transfer(address,address,uint256)",                                   SignatureKind::Event,      SignatureVisibility::Public),
-            ("Approval(address,address,uint256)",                                   SignatureKind::Event,      SignatureVisibility::Public),
-            ("ApprovalForAll(address,address,bool)",                                SignatureKind::Event,      SignatureVisibility::Public),
-            ("balanceOf(address)",                                                  SignatureKind::Function,   SignatureVisibility::External),
-            ("ownerOf(uint256)",                                                    SignatureKind::Function,   SignatureVisibility::External),
-            ("safeTransferFrom(address,address,uint256)",                           SignatureKind::Function,   SignatureVisibility::External),
-            ("transferFrom(address,address,uint256)",                               SignatureKind::Function,   SignatureVisibility::External),
-            ("approve(address,uint256)",                                            SignatureKind::Function,   SignatureVisibility::External),
-            ("getApproved(uint256)",                                                SignatureKind::Function,   SignatureVisibility::External),
-            ("setApprovalForAll(address,bool)",                                     SignatureKind::Function,   SignatureVisibility::External),
-            ("isApprovedForAll(address,address)",                                   SignatureKind::Function,   SignatureVisibility::External),
-            ("safeTransferFrom(address,address,uint256,bytes)",                     SignatureKind::Function,   SignatureVisibility::External),
-            ("supportsInterface(bytes4)",                                           SignatureKind::Function,   SignatureVisibility::Public),
-            ("supportsInterface(bytes4)",                                           SignatureKind::Function,   SignatureVisibility::External),
-            ("Initialized()",                                                       SignatureKind::Error,      SignatureVisibility::Public),
-            ("NotInitialized()",                                                    SignatureKind::Error,      SignatureVisibility::Public),
-            ("NotSlicer()",                                                         SignatureKind::Error,      SignatureVisibility::Public),
-            ("NotAuthorized()",                                                     SignatureKind::Error,      SignatureVisibility::Public),
-            ("InsufficientPayment()",                                               SignatureKind::Error,      SignatureVisibility::Public),
-            ("Claimed(address,uint256,uint256)",                                    SignatureKind::Event,      SignatureVisibility::Public),
-            ("SaleClosed(address,uint256)",                                         SignatureKind::Event,      SignatureVisibility::Public),
-            ("releaseToCollector()",                                                SignatureKind::Function,   SignatureVisibility::External),
-            ("_setPrice(uint256)",                                                  SignatureKind::Function,   SignatureVisibility::External),
-            ("_closeSale()",                                                        SignatureKind::Function,   SignatureVisibility::External),
-            ("saleInfo()",                                                          SignatureKind::Function,   SignatureVisibility::External),
-            ("slicesLeft()",                                                        SignatureKind::Function,   SignatureVisibility::External),
-            ("claim(uint256)",                                                      SignatureKind::Function,   SignatureVisibility::External),
-            ("onERC1155Received(address,address,uint256,uint256,bytes)",            SignatureKind::Function,   SignatureVisibility::External),
-            ("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)",   SignatureKind::Function,   SignatureVisibility::Public),
-            ("Forward(address,uint256,address,uint256,string,bool)",                SignatureKind::Event,      SignatureVisibility::Public),
-            ("terminalDirectory()",                                                 SignatureKind::Function,   SignatureVisibility::External),
-            ("projectId()",                                                         SignatureKind::Function,   SignatureVisibility::External),
-            ("memo()",                                                              SignatureKind::Function,   SignatureVisibility::External),
-            ("SetOperator(address,address,uint256,uint256[],uint256)",              SignatureKind::Event,      SignatureVisibility::Public),
-            ("permissionsOf(address,address,uint256)",                              SignatureKind::Function,   SignatureVisibility::External),
-            ("hasPermission(address,address,uint256,uint256)",                      SignatureKind::Function,   SignatureVisibility::External),
-            ("hasPermissions(address,address,uint256,uint256[])",                   SignatureKind::Function,   SignatureVisibility::External),
-            ("setOperator(address,uint256,uint256[])",                              SignatureKind::Function,   SignatureVisibility::External),
-            ("setOperators(address[],uint256[],uint256[][])",                       SignatureKind::Function,   SignatureVisibility::External),
-            ("Create(uint256,address,bytes32,string,ITerminal,address)",            SignatureKind::Event,      SignatureVisibility::Public),
-            ("SetHandle(uint256,bytes32,address)",                                  SignatureKind::Event,      SignatureVisibility::Public),
-            ("SetUri(uint256,string,address)",                                      SignatureKind::Event,      SignatureVisibility::Public),
-            ("TransferHandle(uint256,address,bytes32,bytes32,address)",             SignatureKind::Event,      SignatureVisibility::Public),
-            ("ClaimHandle(address,uint256,bytes32,address)",                        SignatureKind::Event,      SignatureVisibility::Public),
-            ("ChallengeHandle(bytes32,uint256,address)",                            SignatureKind::Event,      SignatureVisibility::Public),
-            ("RenewHandle(bytes32,uint256,address)",                                SignatureKind::Event,      SignatureVisibility::Public),
-            ("count()",                                                             SignatureKind::Function,   SignatureVisibility::External),
-            ("uriOf(uint256)",                                                      SignatureKind::Function,   SignatureVisibility::External),
-            ("handleOf(uint256)",                                                   SignatureKind::Function,   SignatureVisibility::External),
-            ("projectFor(bytes32)",                                                 SignatureKind::Function,   SignatureVisibility::External),
-            ("transferAddressFor(bytes32)",                                         SignatureKind::Function,   SignatureVisibility::External),
-            ("challengeExpiryOf(bytes32)",                                          SignatureKind::Function,   SignatureVisibility::External),
-            ("exists(uint256)",                                                     SignatureKind::Function,   SignatureVisibility::External),
-            ("create(address,bytes32,string,ITerminal)",                            SignatureKind::Function,   SignatureVisibility::External),
-            ("setHandle(uint256,bytes32)",                                          SignatureKind::Function,   SignatureVisibility::External),
-            ("setUri(uint256,string)",                                              SignatureKind::Function,   SignatureVisibility::External),
-            ("transferHandle(uint256,address,bytes32)",                             SignatureKind::Function,   SignatureVisibility::External),
-            ("claimHandle(bytes32,address,uint256)",                                SignatureKind::Function,   SignatureVisibility::External),
-            ("terminalDirectory()",                                                 SignatureKind::Function,   SignatureVisibility::External),
-            ("migrationIsAllowed(ITerminal)",                                       SignatureKind::Function,   SignatureVisibility::External),
-            ("pay(uint256,address,string,bool)",                                    SignatureKind::Function,   SignatureVisibility::External),
-            ("addToBalance(uint256)",                                               SignatureKind::Function,   SignatureVisibility::External),
-            ("allowMigration(ITerminal)",                                           SignatureKind::Function,   SignatureVisibility::External),
-            ("migrate(uint256,ITerminal)",                                          SignatureKind::Function,   SignatureVisibility::External),
-            ("DeployAddress(uint256,string,address)",                               SignatureKind::Event,      SignatureVisibility::Public),
-            ("SetTerminal(uint256,ITerminal,address)",                              SignatureKind::Event,      SignatureVisibility::Public),
-            ("SetPayerPreferences(address,address,bool)",                           SignatureKind::Event,      SignatureVisibility::Public),
-            ("projects()",                                                          SignatureKind::Function,   SignatureVisibility::External),
-            ("terminalOf(uint256)",                                                 SignatureKind::Function,   SignatureVisibility::External),
-            ("beneficiaryOf(address)",                                              SignatureKind::Function,   SignatureVisibility::External),
-            ("unstakedTicketsPreferenceOf(address)",                                SignatureKind::Function,   SignatureVisibility::External),
-            ("addressesOf(uint256)",                                                SignatureKind::Function,   SignatureVisibility::External),
-            ("deployAddress(uint256,string)",                                       SignatureKind::Function,   SignatureVisibility::External),
-            ("setTerminal(uint256,ITerminal)",                                      SignatureKind::Function,   SignatureVisibility::External),
-            ("setPayerPreferences(address,bool)",                                   SignatureKind::Function,   SignatureVisibility::External),
+            ("TransferSingle(address,address,address,uint256,uint256)",             SignatureKind::Event),
+            ("TransferBatch(address,address,address,uint256[],uint256[])",          SignatureKind::Event),
+            ("ApprovalForAll(address,address,bool)",                                SignatureKind::Event),
+            ("URI(string,uint256)",                                                 SignatureKind::Event),
+            ("balanceOf(address,uint256)",                                          SignatureKind::Function),
+            ("balanceOfBatch(address[],uint256[])",                                 SignatureKind::Function),
+            ("setApprovalForAll(address,bool)",                                     SignatureKind::Function),
+            ("isApprovedForAll(address,address)",                                   SignatureKind::Function),
+            ("safeTransferFrom(address,address,uint256,uint256,bytes)",             SignatureKind::Function),
+            ("safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)",    SignatureKind::Function),
+            ("supportsInterface(bytes4)",                                           SignatureKind::Function),
+            ("onERC1155Received(address,address,uint256,uint256,bytes)",            SignatureKind::Function),
+            ("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)",   SignatureKind::Function),
+            ("supportsInterface(bytes4)",                                           SignatureKind::Function),
+            ("Transfer(address,address,uint256)",                                   SignatureKind::Event),
+            ("Approval(address,address,uint256)",                                   SignatureKind::Event),
+            ("ApprovalForAll(address,address,bool)",                                SignatureKind::Event),
+            ("balanceOf(address)",                                                  SignatureKind::Function),
+            ("ownerOf(uint256)",                                                    SignatureKind::Function),
+            ("safeTransferFrom(address,address,uint256)",                           SignatureKind::Function),
+            ("transferFrom(address,address,uint256)",                               SignatureKind::Function),
+            ("approve(address,uint256)",                                            SignatureKind::Function),
+            ("getApproved(uint256)",                                                SignatureKind::Function),
+            ("setApprovalForAll(address,bool)",                                     SignatureKind::Function),
+            ("isApprovedForAll(address,address)",                                   SignatureKind::Function),
+            ("safeTransferFrom(address,address,uint256,bytes)",                     SignatureKind::Function),
+            ("supportsInterface(bytes4)",                                           SignatureKind::Function),
+            ("supportsInterface(bytes4)",                                           SignatureKind::Function),
+            ("Initialized()",                                                       SignatureKind::Error),
+            ("NotInitialized()",                                                    SignatureKind::Error),
+            ("NotSlicer()",                                                         SignatureKind::Error),
+            ("NotAuthorized()",                                                     SignatureKind::Error),
+            ("InsufficientPayment()",                                               SignatureKind::Error),
+            ("Claimed(address,uint256,uint256)",                                    SignatureKind::Event),
+            ("SaleClosed(address,uint256)",                                         SignatureKind::Event),
+            ("releaseToCollector()",                                                SignatureKind::Function),
+            ("_setPrice(uint256)",                                                  SignatureKind::Function),
+            ("_closeSale()",                                                        SignatureKind::Function),
+            ("saleInfo()",                                                          SignatureKind::Function),
+            ("slicesLeft()",                                                        SignatureKind::Function),
+            ("claim(uint256)",                                                      SignatureKind::Function),
+            ("onERC1155Received(address,address,uint256,uint256,bytes)",            SignatureKind::Function),
+            ("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)",   SignatureKind::Function),
+            ("Forward(address,uint256,address,uint256,string,bool)",                SignatureKind::Event),
+            ("terminalDirectory()",                                                 SignatureKind::Function),
+            ("projectId()",                                                         SignatureKind::Function),
+            ("memo()",                                                              SignatureKind::Function),
+            ("SetOperator(address,address,uint256,uint256[],uint256)",              SignatureKind::Event),
+            ("permissionsOf(address,address,uint256)",                              SignatureKind::Function),
+            ("hasPermission(address,address,uint256,uint256)",                      SignatureKind::Function),
+            ("hasPermissions(address,address,uint256,uint256[])",                   SignatureKind::Function),
+            ("setOperator(address,uint256,uint256[])",                              SignatureKind::Function),
+            ("setOperators(address[],uint256[],uint256[][])",                       SignatureKind::Function),
+            ("Create(uint256,address,bytes32,string,ITerminal,address)",            SignatureKind::Event),
+            ("SetHandle(uint256,bytes32,address)",                                  SignatureKind::Event),
+            ("SetUri(uint256,string,address)",                                      SignatureKind::Event),
+            ("TransferHandle(uint256,address,bytes32,bytes32,address)",             SignatureKind::Event),
+            ("ClaimHandle(address,uint256,bytes32,address)",                        SignatureKind::Event),
+            ("ChallengeHandle(bytes32,uint256,address)",                            SignatureKind::Event),
+            ("RenewHandle(bytes32,uint256,address)",                                SignatureKind::Event),
+            ("count()",                                                             SignatureKind::Function),
+            ("uriOf(uint256)",                                                      SignatureKind::Function),
+            ("handleOf(uint256)",                                                   SignatureKind::Function),
+            ("projectFor(bytes32)",                                                 SignatureKind::Function),
+            ("transferAddressFor(bytes32)",                                         SignatureKind::Function),
+            ("challengeExpiryOf(bytes32)",                                          SignatureKind::Function),
+            ("exists(uint256)",                                                     SignatureKind::Function),
+            ("create(address,bytes32,string,ITerminal)",                            SignatureKind::Function),
+            ("setHandle(uint256,bytes32)",                                          SignatureKind::Function),
+            ("setUri(uint256,string)",                                              SignatureKind::Function),
+            ("transferHandle(uint256,address,bytes32)",                             SignatureKind::Function),
+            ("claimHandle(bytes32,address,uint256)",                                SignatureKind::Function),
+            ("terminalDirectory()",                                                 SignatureKind::Function),
+            ("migrationIsAllowed(ITerminal)",                                       SignatureKind::Function),
+            ("pay(uint256,address,string,bool)",                                    SignatureKind::Function),
+            ("addToBalance(uint256)",                                               SignatureKind::Function),
+            ("allowMigration(ITerminal)",                                           SignatureKind::Function),
+            ("migrate(uint256,ITerminal)",                                          SignatureKind::Function),
+            ("DeployAddress(uint256,string,address)",                               SignatureKind::Event),
+            ("SetTerminal(uint256,ITerminal,address)",                              SignatureKind::Event),
+            ("SetPayerPreferences(address,address,bool)",                           SignatureKind::Event),
+            ("projects()",                                                          SignatureKind::Function),
+            ("terminalOf(uint256)",                                                 SignatureKind::Function),
+            ("beneficiaryOf(address)",                                              SignatureKind::Function),
+            ("unstakedTicketsPreferenceOf(address)",                                SignatureKind::Function),
+            ("addressesOf(uint256)",                                                SignatureKind::Function),
+            ("deployAddress(uint256,string)",                                       SignatureKind::Function),
+            ("setTerminal(uint256,ITerminal)",                                      SignatureKind::Function),
+            ("setPayerPreferences(address,bool)",                                   SignatureKind::Function),
         ];
 
         let actual_signatures = parser::from_sol(
@@ -547,7 +388,6 @@ mod tests {
         for (i, actual_signature) in actual_signatures.iter().enumerate() {
             assert_eq!(actual_signature.text, expected_signatures[i].0);
             assert_eq!(actual_signature.kind, expected_signatures[i].1);
-            assert_eq!(actual_signature.visibility, expected_signatures[i].2);
         }
 
         // If the hash is correct for one signature then it must also be correct for all others
@@ -612,466 +452,29 @@ mod tests {
         let signatures = parser::from_sol(&code);
         assert_eq!(signatures[0].text, "supportsInterface(bytes4)");
         assert_eq!(signatures[0].kind, SignatureKind::Function);
-        assert_eq!(signatures[0].visibility, SignatureVisibility::External);
 
         assert_eq!(signatures[1].text, "Transfer(address,address,uint256)");
         assert_eq!(signatures[1].kind, SignatureKind::Event);
-        assert_eq!(signatures[1].visibility, SignatureVisibility::Public);
 
         assert_eq!(signatures[2].text, "Recv(address,address,uint256)");
         assert_eq!(signatures[2].kind, SignatureKind::Error);
-        assert_eq!(signatures[2].visibility, SignatureVisibility::Public);
 
         assert_eq!(signatures[3].text, "safeTransferFrom(address,address,uint256)");
         assert_eq!(signatures[3].kind, SignatureKind::Function);
-        assert_eq!(signatures[3].visibility, SignatureVisibility::External);
 
         assert_eq!(signatures[4].text, "toHexString(uint256,uint256)");
         assert_eq!(signatures[4].kind, SignatureKind::Function);
-        assert_eq!(signatures[4].visibility, SignatureVisibility::Internal);
 
         assert_eq!(signatures[5].text, "functionCall(address,bytes,string)");
         assert_eq!(signatures[5].kind, SignatureKind::Function);
-        assert_eq!(signatures[5].visibility, SignatureVisibility::Internal);
 
         assert_eq!(signatures[6].text, "_transfer(address,address,uint256)");
         assert_eq!(signatures[6].kind, SignatureKind::Function);
-        assert_eq!(signatures[6].visibility, SignatureVisibility::Internal);
 
         assert_eq!(signatures[7].text, "tokenURI(uint256)");
         assert_eq!(signatures[7].kind, SignatureKind::Function);
-        assert_eq!(signatures[7].visibility, SignatureVisibility::Public);
 
         assert_eq!(signatures[8].text, "doesntWorkButNowDoesBecauseItsFixedYay(address,uint256)");
         assert_eq!(signatures[8].kind, SignatureKind::Function);
-        assert_eq!(signatures[8].visibility, SignatureVisibility::Internal);
-    }
-
-    #[test]
-    fn from_sol_signature_visibility() {
-        let code = r#"
-        function signatureA01() internal pure returns (uint256) {}
-        function signatureA02() pure internal returns (uint256) {}
-        function signatureB01(uint256 x) external pure {}
-        function signatureB02(uint256 x) pure external {}
-        function signatureC01(uint256 x, addresss y) public pure {}
-        function signatureC02(uint256 x, address y) pure public {}
-        function signatureD01(uint256 x, addresss y) private pure {}
-        function signatureD02(uint256 x, address y) pure private {}
-        "#;
-
-        let signatures = parser::from_sol(code);
-        assert_eq!(signatures[0].visibility, SignatureVisibility::Internal);
-        assert_eq!(signatures[1].visibility, SignatureVisibility::Internal);
-
-        assert_eq!(signatures[2].visibility, SignatureVisibility::External);
-        assert_eq!(signatures[3].visibility, SignatureVisibility::External);
-
-        assert_eq!(signatures[4].visibility, SignatureVisibility::Public);
-        assert_eq!(signatures[5].visibility, SignatureVisibility::Public);
-
-        assert_eq!(signatures[6].visibility, SignatureVisibility::Private);
-        assert_eq!(signatures[7].visibility, SignatureVisibility::Private);
-    }
-
-    #[test]
-    fn from_sol_assign_visibility() {
-        let code = r#"
-            pragma solidity 0.4.13;
-
-            function foobar() {}            // public visibility should be assigned here
-            function foobar() public {}     // visibility should be untouched here
-            function foobar() private {}    // ^
-            function foobar() internal {}   // ^
-            function foobar() external {}   // ^
-        "#;
-
-        let signatures = crate::parser::from_sol(code);
-        assert_eq!(signatures[0].visibility, SignatureVisibility::Public);
-        assert_eq!(signatures[1].visibility, SignatureVisibility::Public);
-        assert_eq!(signatures[2].visibility, SignatureVisibility::Private);
-        assert_eq!(signatures[3].visibility, SignatureVisibility::Internal);
-        assert_eq!(signatures[4].visibility, SignatureVisibility::External);
-    }
-
-    #[test]
-    fn pragma() {
-        let pragmas_valid = vec![
-            // "pragma solidity ^0.4.0 || ^0.5.0 || ^0.6.0;",
-            "pragma solidity 0.4.10;",
-            "pragma solidity 0.4.13;",
-            "pragma solidity 0.4.14;",
-            "pragma solidity 0.4.16;",
-            "pragma solidity 0.4.17;",
-            "pragma solidity 0.4.19;",
-            "pragma solidity 0.4.24;",
-            "pragma solidity 0.4.25;",
-            "pragma solidity 0.4.8;",
-            "pragma solidity 0.4.9;",
-            "pragma solidity < 0.4.0;",
-            "pragma solidity < 0.5;",
-            "pragma solidity < 0.6;",
-            "pragma solidity < 1;",
-            "pragma solidity <0.9.0;",
-            "pragma solidity <= 0.4.0;",
-            "pragma solidity <= 0.4;",
-            "pragma solidity <= 0.8.0;",
-            "pragma solidity <= 0;",
-            "pragma solidity <=0.4.20;",
-            "pragma solidity <=0.5.16;",
-            "pragma solidity <=0.6.7;",
-            "pragma solidity <=0.7.0;",
-            "pragma solidity <=0.7.2;",
-            "pragma solidity > 0.4.0 < 0.8.0;",
-            "pragma solidity > 0.4.0;",
-            "pragma solidity > 0.4.4;",
-            "pragma solidity > 0.4;",
-            "pragma solidity >0.4.0 <0.7.0;",
-            "pragma solidity >0.4.0 <0.8.0;",
-            "pragma solidity >0.4.0 <=0.7.0;",
-            "pragma solidity >0.4.0 <=0.9.0;",
-            "pragma solidity >0.4.13 <=0.7.5;",
-            "pragma solidity >0.4.16;",
-            "pragma solidity >0.4.18 <0.5.0;",
-            "pragma solidity >0.4.19;",
-            "pragma solidity >0.4.21 <0.6.0;",
-            "pragma solidity >0.4.22 <0.6.0;",
-            "pragma solidity >0.4.25;",
-            "pragma solidity >0.4;",
-            "pragma solidity >= 0.4.0 < 0.7.3;",
-            "pragma solidity >= 0.4.11 < 0.5;",
-            "pragma solidity >= 0.4.19 < 0.9.0;",
-            "pragma solidity >= 0.4.19;",
-            "pragma solidity >= 0.4.21 <0.6.0;",
-            "pragma solidity >= 0.4.22 < 0.5;",
-            "pragma solidity >= 0.4.22 < 0.7.0;",
-            "pragma solidity >= 0.4.22 < 0.70;",
-            "pragma solidity >= 0.4.22 < 0.8.0;",
-            "pragma solidity >= 0.4.22;",
-            "pragma solidity >= 0.4.25 < 0.6.0;",
-            "pragma solidity >= 0.4.3 < 0.9.0;",
-            "pragma solidity >= 0.4.5<0.60;",
-            "pragma solidity >= 0.4;",
-            "pragma solidity >=0.1.1 <=0.5.0;",
-            "pragma solidity >=0.4 <0.9;",
-            "pragma solidity >=0.4 <=0.4;",
-            "pragma solidity >=0.4.0 < 0.7.0;",
-            "pragma solidity >=0.4.0 < 0.8.0;",
-            "pragma solidity >=0.4.0 < 0.9.0;",
-            "pragma solidity >=0.4.0 <0.4.8;",
-            "pragma solidity >=0.4.0 <0.7.0;",
-            "pragma solidity >=0.4.0 <0.7.1;",
-            "pragma solidity >=0.4.0 <0.8.0;",
-            "pragma solidity >=0.4.0 <0.9.0;",
-            "pragma solidity >=0.4.0 <=0.6.0;",
-            "pragma solidity >=0.4.0 <=0.8.0;",
-            "pragma solidity >=0.4.10 <0.6.0;",
-            "pragma solidity >=0.4.11 <0.5.0;",
-            "pragma solidity >=0.4.13;",
-            "pragma solidity >=0.4.14;",
-            "pragma solidity >=0.4.15 < 0.8.0;",
-            "pragma solidity >=0.4.15 <0.5.0;",
-            "pragma solidity >=0.4.15 <0.6.0;",
-            "pragma solidity >=0.4.15;",
-            "pragma solidity >=0.4.16 < 0.9.0;",
-            "pragma solidity >=0.4.16 <0.8.0;",
-            "pragma solidity >=0.4.16;",
-            "pragma solidity >=0.4.17 ;",
-            "pragma solidity >=0.4.17 <0.7.0;",
-            "pragma solidity >=0.4.18 <0.6.0;",
-            "pragma solidity >=0.4.18 <0.7.0;",
-            "pragma solidity >=0.4.19 <0.6.0;",
-            "pragma solidity >=0.4.19 <0.7.0;",
-            "pragma solidity >=0.4.2 ;",
-            "pragma solidity >=0.4.2 <0.6.0;",
-            "pragma solidity >=0.4.2 <0.6.1;",
-            "pragma solidity >=0.4.20 <0.6.1;",
-            "pragma solidity >=0.4.21 <0.6.0;",
-            "pragma solidity >=0.4.21 <0.6.1;",
-            "pragma solidity >=0.4.21 <0.71.0;",
-            "pragma solidity >=0.4.21 <=0.6.0;",
-            "pragma solidity >=0.4.21 <=0.6.12;",
-            "pragma solidity >=0.4.21 <=0.6.6;",
-            "pragma solidity >=0.4.21 <=0.6.7;",
-            "pragma solidity >=0.4.21 <=0.7.2;",
-            "pragma solidity >=0.4.21 <=0.7.5;",
-            "pragma solidity >=0.4.21;",
-            "pragma solidity >=0.4.22 < 0.7.0;",
-            "pragma solidity >=0.4.22 <0.6.0;",
-            "pragma solidity >=0.4.22 <0.9.0;",
-            "pragma solidity >=0.4.22 <=0.7.0;",
-            "pragma solidity >=0.4.22 <=0.7.5;",
-            "pragma solidity >=0.4.22<0.6.0;",
-            "pragma solidity >=0.4.23 < 0.6.0;",
-            "pragma solidity >=0.4.24  <0.6.0;",
-            "pragma solidity >=0.4.24 < 0.7.0;",
-            "pragma solidity >=0.4.24 <0.5.0;",
-            "pragma solidity >=0.4.24 <0.6.0;",
-            "pragma solidity >=0.4.24 <0.6.11;",
-            "pragma solidity >=0.4.24 <0.7.0;",
-            "pragma solidity >=0.4.24 <= 0.5.16;",
-            "pragma solidity >=0.4.25 < 6.0;",
-            "pragma solidity >=0.4.25 <=0.6.10;",
-            "pragma solidity >=0.4.25 <=0.7.0;",
-            "pragma solidity >=0.4.26 <0.6.0;",
-            "pragma solidity >=0.4.6 <0.8.0;",
-            "pragma solidity >=0.4.6;",
-            "pragma solidity >=0.4.8 <0.8.0 ;",
-            "pragma solidity >=0.4.8 <0.8.0;",
-            "pragma solidity ^ 0.4.0;",
-            "pragma solidity ^ 0.4.13;",
-            "pragma solidity ^ 0.4.15;",
-            "pragma solidity ^ 0.4.17;",
-            "pragma solidity ^ 0.4.21;",
-            "pragma solidity ^ 0.4.24;",
-            "pragma solidity ^ 0.4.25;",
-            "pragma solidity ^ 0.4.26;",
-            "pragma solidity ^ 0.4.4;",
-            "pragma solidity ^ 0.4.8;",
-            "pragma solidity ^ 0.4.8;",
-            "pragma solidity ^0.4.0;",
-            "pragma solidity ^0.4.10;",
-            "pragma solidity ^0.4.12;",
-            "pragma solidity ^0.4.12;",
-            "pragma solidity ^0.4.13;",
-            "pragma solidity ^0.4.16;",
-            "pragma solidity ^0.4.17 < 0.6.12;",
-            "pragma solidity ^0.4.17 <0.6.12;",
-            "pragma solidity ^0.4.18;",
-            "pragma solidity ^0.4.20;",
-            "pragma solidity ^0.4.21 < 0.7.0;",
-            "pragma solidity ^0.4.21 <0.6.12;",
-            "pragma solidity ^0.4.21;",
-            "pragma solidity ^0.4.21;",
-            "pragma solidity ^0.4.21;",
-            "pragma solidity ^0.4.23;",
-            "pragma solidity ^0.4.23;",
-            "pragma solidity ^0.4.24 ;",
-            "pragma solidity ^0.4.24;",
-            "pragma solidity ^0.4.26;",
-            "pragma solidity ^0.4.6;",
-            "pragma solidity ^0.4.7;",
-            "pragma solidity v0.4.0;",
-            "pragma solidity v0.4;",
-            "pragma solidity ~0.4.19;",
-            "pragma solidity ~0.4.21;",
-            "pragma solidity ~0.4.24;",
-        ];
-
-        let pragmas_invalid = vec![
-            // "pragma solidity ~0.4.24 >=0.5;",
-            // "pragma solidity 0.7.x;",
-            // "pragma solidity > 0;",
-            // "pragma solidity >= 0;",
-            // "pragma solidity >=0 <=1;",
-            // "pragma solidity ^0;",
-            // "pragma solidity ^;",
-            // "pragma solidity v0;",
-            "pragma solidity ^0.6.0;",
-            "pragma solidity 0.5.0;",
-            "pragma solidity 0.5.10;",
-            "pragma solidity 0.5.12;",
-            "pragma solidity 0.5.14;",
-            "pragma solidity 0.5.15;",
-            "pragma solidity 0.5.16;",
-            "pragma solidity 0.5.1;",
-            "pragma solidity 0.5.3;",
-            "pragma solidity 0.5.4;",
-            "pragma solidity 0.5.5;",
-            "pragma solidity 0.5.6;",
-            "pragma solidity 0.5.7;",
-            "pragma solidity 0.5.7;",
-            "pragma solidity 0.6.0;",
-            "pragma solidity 0.6.10;",
-            "pragma solidity 0.6.1;",
-            "pragma solidity 0.6.5;",
-            "pragma solidity 0.6.9;",
-            "pragma solidity 0.7.12;",
-            "pragma solidity 0.7.5 <0.8.0;",
-            "pragma solidity 0.7.6;",
-            "pragma solidity 0.7;",
-            "pragma solidity 0.8 <= 0.9;",
-            "pragma solidity 0.8.2;",
-            "pragma solidity 0.8.5;",
-            "pragma solidity 0.8.7;",
-            "pragma solidity = 0.5.2;",
-            "pragma solidity = 0.6.0;",
-            "pragma solidity = 0.6.11;",
-            "pragma solidity = 0.7.5;",
-            "pragma solidity =0.5.0;",
-            "pragma solidity =0.5.1;",
-            "pragma solidity =0.5.3;",
-            "pragma solidity =0.6.11;",
-            "pragma solidity =0.6.4;",
-            "pragma solidity =0.6.7;",
-            "pragma solidity =0.7.2;",
-            "pragma solidity =0.7.6;",
-            "pragma solidity =0.8.0;",
-            "pragma solidity > 0.5.2 < 0.6.0;",
-            "pragma solidity > 0.6.0 < 0.7.0;",
-            "pragma solidity > 0.6.0;",
-            "pragma solidity > 0.6.1 < 0.7.0;",
-            "pragma solidity > 0.6.1 <= 0.7.0;",
-            "pragma solidity > 0.6.99 < 0.8.0;",
-            "pragma solidity >0.5.0 <0.9.0;",
-            "pragma solidity >0.5.10 <0.8.0;",
-            "pragma solidity >0.5.17;",
-            "pragma solidity >0.5.2 <0.8.0;",
-            "pragma solidity >0.5.4;",
-            "pragma solidity >0.6.1 <=0.7.0;",
-            "pragma solidity >0.6.10 <0.7;",
-            "pragma solidity >0.6.10;",
-            "pragma solidity >0.6.12;",
-            "pragma solidity >0.6.9 <0.8.0;",
-            "pragma solidity >0.7.0 <0.9.0;",
-            "pragma solidity >0.7.1;",
-            "pragma solidity >0.7.2;",
-            "pragma solidity >= 0.5 < 0.6;",
-            "pragma solidity >= 0.5.0 < 0.6.0;",
-            "pragma solidity >= 0.5.0 < 0.6.0;",
-            "pragma solidity >= 0.5.0 < 0.8;",
-            "pragma solidity >= 0.5.0 < 0.9.0;",
-            "pragma solidity >= 0.5.0 <0.6.0;",
-            "pragma solidity >= 0.5.10 < 0.7.0;",
-            "pragma solidity >= 0.5.10;",
-            "pragma solidity >= 0.5.17;",
-            "pragma solidity >= 0.5.3 < 0.7.3;",
-            "pragma solidity >= 0.5.3;",
-            "pragma solidity >= 0.5.7;",
-            "pragma solidity >= 0.5;",
-            "pragma solidity >= 0.6 <0.8;",
-            "pragma solidity >= 0.6.0 < 0.8;",
-            "pragma solidity >= 0.6.0 <= 0.7.0;",
-            "pragma solidity >= 0.6.12;",
-            "pragma solidity >= 0.6.5;",
-            "pragma solidity >= 0.6.7 <0.7.0;",
-            "pragma solidity >= 0.7.0 < 0.8;",
-            "pragma solidity >= 0.7.0 <0.8.0;",
-            "pragma solidity >= 0.7.0 <0.9.0;",
-            "pragma solidity >= 0.7.5;",
-            "pragma solidity >= 0.7.6 < 0.8.0;",
-            "pragma solidity >= 0.8;",
-            "pragma solidity >=0.5 < 0.8;",
-            "pragma solidity >=0.5.0 < 0.7.0 ;",
-            "pragma solidity >=0.5.0 < 0.8.0;",
-            "pragma solidity >=0.5.0 <0.6.9;",
-            "pragma solidity >=0.5.0 <0.7.5;",
-            "pragma solidity >=0.5.0 <= 0.6.2;",
-            "pragma solidity >=0.5.1 < 0.6.0;",
-            "pragma solidity >=0.5.1 <0.7.0;",
-            "pragma solidity >=0.5.10 <0.8.0;",
-            "pragma solidity >=0.5.10;",
-            "pragma solidity >=0.5.11 <0.6.2;",
-            "pragma solidity >=0.5.12 <0.8.0;",
-            "pragma solidity >=0.5.12 <= 0.6.0;",
-            "pragma solidity >=0.5.13 <0.7.3;",
-            "pragma solidity >=0.5.14 <0.7.4;",
-            "pragma solidity >=0.5.15 <0.6.8;",
-            "pragma solidity >=0.5.16 <0.7.0;",
-            "pragma solidity >=0.5.16 <0.7.1;",
-            "pragma solidity >=0.5.16 <0.8.0;",
-            "pragma solidity >=0.5.17 <0.7.0;",
-            "pragma solidity >=0.5.17 <0.8.5;",
-            "pragma solidity >=0.5.1<0.8.0;",
-            "pragma solidity >=0.5.2 <0.5.4;",
-            "pragma solidity >=0.5.3 <0.7.0;",
-            "pragma solidity >=0.5.3 <=0.5.8;",
-            "pragma solidity >=0.5.3;",
-            "pragma solidity >=0.5.3<0.6.0;",
-            "pragma solidity >=0.5.5;",
-            "pragma solidity >=0.5.7 <0.7.0;",
-            "pragma solidity >=0.5.8 < 0.6.0;",
-            "pragma solidity >=0.5.8 <0.9.0;",
-            "pragma solidity >=0.5;",
-            "pragma solidity >=0.6.0 <0.7.3;",
-            "pragma solidity >=0.6.0 <0.7.5;",
-            "pragma solidity >=0.6.0 <0.7;",
-            "pragma solidity >=0.6.0 <0.8.4;",
-            "pragma solidity >=0.6.0 <0.9.0;",
-            "pragma solidity >=0.6.0 <0.9.0;",
-            "pragma solidity >=0.6.10 <0.7;",
-            "pragma solidity >=0.6.11 <0.9.0;",
-            "pragma solidity >=0.6.12 <0.9.0;",
-            "pragma solidity >=0.6.2 <0.9.0;",
-            "pragma solidity >=0.6.3;",
-            "pragma solidity >=0.6.4 <0.8.5;",
-            "pragma solidity >=0.6.6 <0.9.0;",
-            "pragma solidity >=0.6.8 <0.7.0;",
-            "pragma solidity >=0.6.8 <0.9.0;",
-            "pragma solidity >=0.6.9;",
-            "pragma solidity >=0.7 < 0.8;",
-            "pragma solidity >=0.7 <0.9;",
-            "pragma solidity >=0.7.0 < 0.8.0;",
-            "pragma solidity >=0.7.0 <0.8.0;",
-            "pragma solidity >=0.7.0 <0.8.2;",
-            "pragma solidity >=0.7.0;",
-            "pragma solidity >=0.7.1 <0.8.0;",
-            "pragma solidity >=0.7.1 <0.9.0;",
-            "pragma solidity >=0.7.3;",
-            "pragma solidity >=0.7.5 <8.0.0;",
-            "pragma solidity >=0.7.5;",
-            "pragma solidity >=0.8.0 <0.9.0 >=0.8.6 <0.9.0;",
-            "pragma solidity >=0.8.0;",
-            "pragma solidity >=0.8.2 <0.9.0;",
-            "pragma solidity >=0.8.3;",
-            "pragma solidity >=0.8.6;",
-            "pragma solidity ^ 0.5.0;",
-            "pragma solidity ^ 0.5.16;",
-            "pragma solidity ^ 0.5.17;",
-            "pragma solidity ^ 0.5.7;",
-            "pragma solidity ^ 0.5.7;",
-            "pragma solidity ^ 0.5.9;",
-            "pragma solidity ^ 0.6.0 ;",
-            "pragma solidity ^ 0.6.0;",
-            "pragma solidity ^ 0.6.10;",
-            "pragma solidity ^ 0.6.1;",
-            "pragma solidity ^0.5 <0.6.0;",
-            "pragma solidity ^0.5.0 ;",
-            "pragma solidity ^0.5.0 <0.6.0;",
-            "pragma solidity ^0.5.0 <0.7.0;",
-            "pragma solidity ^0.5.0 <6.0.0;",
-            "pragma solidity ^0.5.0;",
-            "pragma solidity ^0.5.0;",
-            "pragma solidity ^0.5.0;",
-            "pragma solidity ^0.5.10;",
-            "pragma solidity ^0.5.11;",
-            "pragma solidity ^0.5.13;",
-            "pragma solidity ^0.5.15;",
-            "pragma solidity ^0.5.15;",
-            "pragma solidity ^0.5.16;",
-            "pragma solidity ^0.5.16;",
-            "pragma solidity ^0.5.3;",
-            "pragma solidity ^0.5.4.0;",
-            "pragma solidity ^0.5.4;",
-            "pragma solidity ^0.5.5 <0.5.8;",
-            "pragma solidity ^0.5.7;",
-            "pragma solidity ^0.5.8;",
-            "pragma solidity ^0.5.8;",
-            "pragma solidity ^0.6.1;",
-            "pragma solidity ^0.6.4;",
-            "pragma solidity ^0.6.6;",
-            "pragma solidity ^0.6;",
-            "pragma solidity ^0.7.0 ;",
-            "pragma solidity ^0.7.4;",
-            "pragma solidity ^0.7.5;",
-            "pragma solidity ^0.7.6;",
-            "pragma solidity ^0.8.0 <0.9.0;",
-            "pragma solidity ^0.8.2;",
-            "pragma solidity ^0.8.6;",
-            "pragma solidity ^4.4.0;",
-            "pragma solidity=0.6.12;",
-            "pragma solidity^0.5.10;",
-            "pragma solidity^0.5.17;",
-            "pragma solidity^0.6.0;",
-            "pragma solidity^0.8.0;",
-        ];
-
-        for pragma in pragmas_valid {
-            assert_eq!(crate::parser::can_assign_public_visibility(pragma).unwrap(), true);
-        }
-
-        for pragma in pragmas_invalid {
-            assert_eq!(crate::parser::can_assign_public_visibility(pragma).unwrap(), false);
-        }
     }
 }

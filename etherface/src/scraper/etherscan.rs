@@ -25,7 +25,6 @@ impl Scraper for EtherscanScraper {
                             signature_id: inserted_signature.id,
                             contract_id: contract.id,
                             kind: signature.kind,
-                            visibility: signature.visibility,
                             added_at: Utc::now(),
                         };
 

@@ -70,11 +70,10 @@ table! {
     use diesel::sql_types::*;
     use crate::model::*;
 
-    mapping_signature_etherscan (signature_id, contract_id, kind, visibility) {
+    mapping_signature_etherscan (signature_id, contract_id, kind) {
         signature_id -> Int4,
         contract_id -> Int4,
         kind -> Signature_kind,
-        visibility -> Signature_visibility,
         added_at -> Timestamptz,
     }
 }
@@ -94,11 +93,10 @@ table! {
     use diesel::sql_types::*;
     use crate::model::*;
 
-    mapping_signature_github (signature_id, repository_id, kind, visibility) {
+    mapping_signature_github (signature_id, repository_id, kind) {
         signature_id -> Int4,
         repository_id -> Int4,
         kind -> Signature_kind,
-        visibility -> Signature_visibility,
         added_at -> Timestamptz,
     }
 }

@@ -1,6 +1,5 @@
 use crate::error::Error;
 use crate::model::SignatureKind;
-use crate::model::SignatureVisibility;
 use crate::model::SignatureWithMetadata;
 use serde::Deserialize;
 
@@ -45,15 +44,8 @@ impl FourbyteClient {
 
             let mut signatures = Vec::new();
             for signature in page.results {
-                signatures.push(SignatureWithMetadata::new(
-                    signature.text_signature,
-                    SignatureKind::Function,
-                    // NOTE: 4Byte does not carry any signature visibility information nor does it in our
-                    // database model (`mapping_signature_fourbyte` table). Altough we assign a public
-                    // visibility here for the sake of the `SignatureWithMetadata` struct the field itself
-                    // is NOT used when inserting 4Byte signatures into our database.
-                    SignatureVisibility::Public,
-                ));
+                signatures
+                    .push(SignatureWithMetadata::new(signature.text_signature, SignatureKind::Function));
             }
 
             return Ok(Some(signatures));
@@ -69,15 +61,7 @@ impl FourbyteClient {
 
             let mut signatures = Vec::new();
             for signature in page.results {
-                signatures.push(SignatureWithMetadata::new(
-                    signature.text_signature,
-                    SignatureKind::Event,
-                    // NOTE: 4Byte does not carry any signature visibility information nor does it in our
-                    // database model (`mapping_signature_fourbyte` table). Altough we assign a public
-                    // visibility here for the sake of the `SignatureWithMetadata` struct the field itself
-                    // is NOT used when inserting 4Byte signatures into our database.
-                    SignatureVisibility::Public,
-                ));
+                signatures.push(SignatureWithMetadata::new(signature.text_signature, SignatureKind::Event));
             }
 
             return Ok(Some(signatures));

@@ -1,5 +1,4 @@
 CREATE TYPE signature_kind          AS ENUM ('function', 'event', 'error');
-CREATE TYPE signature_visibility    AS ENUM ('public', 'private', 'external', 'internal');
 
 CREATE TABLE github_crawler_metadata (
     id                              INT                         NOT NULL,
@@ -83,20 +82,18 @@ CREATE TABLE mapping_signature_github (
     signature_id    INT                         NOT NULL REFERENCES signature           (id),
     repository_id   INT                         NOT NULL REFERENCES github_repository   (id),
     kind            SIGNATURE_KIND              NOT NULL, 
-    visibility      SIGNATURE_VISIBILITY        NOT NULL,
     added_at        TIMESTAMP WITH TIME ZONE    NOT NULL,
 
-    PRIMARY KEY (signature_id, repository_id, kind, visibility)
+    PRIMARY KEY (signature_id, repository_id, kind)
 );
 
 CREATE TABLE mapping_signature_etherscan (
     signature_id    INT                         NOT NULL REFERENCES signature            (id),
     contract_id     INT                         NOT NULL REFERENCES etherscan_contract   (id),
     kind            SIGNATURE_KIND              NOT NULL,
-    visibility      SIGNATURE_VISIBILITY        NOT NULL, 
     added_at        TIMESTAMP WITH TIME ZONE    NOT NULL,
 
-    PRIMARY KEY (signature_id, contract_id, kind, visibility)
+    PRIMARY KEY (signature_id, contract_id, kind)
 );
 
 CREATE TABLE mapping_signature_fourbyte (

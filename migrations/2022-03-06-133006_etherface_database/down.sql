@@ -11,4 +11,3 @@ DROP TABLE github_user;
 DROP TABLE github_crawler_metadata;
 
 DROP TYPE signature_kind;
-DROP TYPE signature_visibility;

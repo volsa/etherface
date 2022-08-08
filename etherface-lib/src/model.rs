@@ -194,10 +194,6 @@ pub struct SignatureWithMetadata {
     pub text: String,
     pub hash: String,
     pub kind: SignatureKind,
-
-    /// Visibility of a signature, which can be public, private, internal and external.
-    /// See https://docs.soliditylang.org/en/latest/contracts.html#function-visibility for more information.
-    pub visibility: SignatureVisibility,
 }
 
 #[derive(Queryable, Insertable)]
@@ -206,7 +202,6 @@ pub struct MappingSignatureGithub {
     pub signature_id: i32,
     pub repository_id: i32,
     pub kind: SignatureKind,
-    pub visibility: SignatureVisibility,
     pub added_at: DateTime<Utc>,
 }
 
@@ -216,7 +211,6 @@ pub struct MappingSignatureEtherscan {
     pub signature_id: i32,
     pub contract_id: i32,
     pub kind: SignatureKind,
-    pub visibility: SignatureVisibility,
     pub added_at: DateTime<Utc>,
 }
 
@@ -236,15 +230,10 @@ pub struct MappingStargazer {
 }
 
 impl SignatureWithMetadata {
-    pub fn new(text: String, kind: SignatureKind, visibility: SignatureVisibility) -> Self {
+    pub fn new(text: String, kind: SignatureKind) -> Self {
         let hash = format!("{:x}", Keccak256::digest(&text));
 
-        Self {
-            text,
-            hash,
-            kind,
-            visibility,
-        }
+        Self { text, hash, kind }
     }
 
     pub fn to_insertable(&self) -> SignatureInsert {
@@ -268,16 +257,6 @@ pub enum SignatureKind {
     Receive,
 }
 
-#[derive(Serialize, Deserialize, DbEnum, Debug, PartialEq, Eq, Hash)]
-#[serde(rename_all = "lowercase")]
-#[DieselType = "Signature_visibility"]
-pub enum SignatureVisibility {
-    Public,
-    Private,
-    External,
-    Internal,
-}
-
 impl FromStr for SignatureKind {
     type Err = ();
 
@@ -292,24 +271,6 @@ impl FromStr for SignatureKind {
 
             // The function should never return an error as long as Solidity does not introduce a new
             // interface kind which we have not yet covered in our above pattern matching.
-            _ => Err(()),
-        }
-    }
-}
-
-impl FromStr for SignatureVisibility {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "public" => Ok(SignatureVisibility::Public),
-            "private" => Ok(SignatureVisibility::Private),
-            "external" => Ok(SignatureVisibility::External),
-            "internal" => Ok(SignatureVisibility::Internal),
-
-            // The function should never return an error because our REGEX_SIGNATURE pattern only finds
-            // signatures that (optionally) **must** contain one of the keywords covered in the above pattern
-            // matching.
             _ => Err(()),
         }
     }
