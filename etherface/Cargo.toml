@@ -7,10 +7,8 @@ edition = "2021"
 
 [dependencies]
 etherface-lib = { path = "../etherface-lib" }
-anyhow = "1.0.56"
-walkdir = "*"
-
-chrono = "*"
-
-simplelog = "0.11.2"
-log = "0.4.16"
+anyhow = "1.0"
+walkdir = "2.0"
+chrono = "0.4"
+simplelog = "0.11.0"
+log = "0.4"
