@@ -202,10 +202,9 @@ pub struct SignatureWithMetadata {
 
 #[derive(Queryable, Insertable)]
 #[table_name = "mapping_signature_github"]
-pub struct MappingSignatureGithub<'a> {
+pub struct MappingSignatureGithub {
     pub signature_id: i32,
     pub repository_id: i32,
-    pub path: &'a str,
     pub kind: SignatureKind,
     pub visibility: SignatureVisibility,
     pub added_at: DateTime<Utc>,

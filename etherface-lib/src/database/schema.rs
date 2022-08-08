@@ -97,7 +97,6 @@ table! {
     mapping_signature_github (signature_id, repository_id, kind, visibility) {
         signature_id -> Int4,
         repository_id -> Int4,
-        path -> Text,
         kind -> Signature_kind,
         visibility -> Signature_visibility,
         added_at -> Timestamptz,

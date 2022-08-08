@@ -111,7 +111,6 @@ impl Scraper for GithubScraper {
                             let mapping_entity = MappingSignatureGithub {
                                 signature_id: signature_db.id,
                                 repository_id: repo.id,
-                                path: "", // TODO: Empty, but will be removed anyways so it's fine
                                 kind: signature.kind,
                                 visibility: signature.visibility,
                                 added_at: Utc::now(),

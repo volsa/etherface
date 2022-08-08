@@ -82,7 +82,6 @@ CREATE TABLE signature (
 CREATE TABLE mapping_signature_github (
     signature_id    INT                         NOT NULL REFERENCES signature           (id),
     repository_id   INT                         NOT NULL REFERENCES github_repository   (id),
-    path            TEXT                        NOT NULL,
     kind            SIGNATURE_KIND              NOT NULL, 
     visibility      SIGNATURE_VISIBILITY        NOT NULL,
     added_at        TIMESTAMP WITH TIME ZONE    NOT NULL,
