@@ -1,3 +1,5 @@
+#![allow(clippy::new_without_default)]
+
 pub mod api;
 pub mod config;
 pub mod database;

@@ -1,4 +1,5 @@
 //! Structs that are both used in the GitHub API as well as the Database schema / bindings.
+#![allow(clippy::extra_unused_lifetimes)] // Clippy complains about the Insertable proc-macro
 
 use crate::database::schema::etherscan_contract;
 use crate::database::schema::github_crawler_metadata;
