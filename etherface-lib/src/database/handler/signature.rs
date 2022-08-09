@@ -1,5 +1,7 @@
+use crate::database::schema::mapping_signature_kind;
 use crate::database::schema::signature;
 use crate::database::schema::signature::dsl::*;
+use crate::model::MappingSignatureKind;
 use crate::model::Signature;
 use crate::model::SignatureWithMetadata;
 use diesel::prelude::*;
@@ -28,10 +30,21 @@ impl<'a> SignatureHandler<'a> {
             return val;
         }
 
-        diesel::insert_into(signature::table)
+        let res: Signature = diesel::insert_into(signature::table)
             .values(&entity.to_insertable())
             .get_result(self.connection)
-            .unwrap()
+            .unwrap();
+
+        diesel::insert_into(mapping_signature_kind::table)
+            .values(&MappingSignatureKind {
+                signature_id: res.id,
+                kind: entity.kind,
+            })
+            .on_conflict_do_nothing()
+            .execute(self.connection)
+            .unwrap();
+
+        res
     }
 
     fn get_by_hash(&self, entity_hash: &str) -> Option<Signature> {

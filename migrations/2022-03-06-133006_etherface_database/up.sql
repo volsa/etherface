@@ -1,4 +1,4 @@
-CREATE TYPE signature_kind          AS ENUM ('function', 'event', 'error');
+CREATE TYPE signature_kind AS ENUM ('function', 'event', 'error');
 
 CREATE TABLE github_crawler_metadata (
     id                              INT                         NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE github_repository (
     found_by_crawling   BOOLEAN                     NOT NULL, -- flag indicating if repository was found using the API search endpoint or by crawling
 
     PRIMARY KEY (id),
-    FOREIGN KEY (owner_id)          REFERENCES github_user (id),
+    FOREIGN KEY (owner_id)          REFERENCES github_user (id)
 );
 
 CREATE TABLE etherscan_contract (
@@ -69,10 +69,18 @@ CREATE TABLE signature (
     id          SERIAL                      NOT NULL,
     text        TEXT                        NOT NULL,
     hash        TEXT                        NOT NULL,
+    is_valid    BOOLEAN                     NOT NULL,
     added_at    TIMESTAMP WITH TIME ZONE    NOT NULL,
 
     UNIQUE (hash),
     PRIMARY KEY (id)
+);
+
+CREATE TABLE mapping_signature_kind (
+    signature_id    INT             NOT NULL,
+    kind            SIGNATURE_KIND  NOT NULL,
+
+    PRIMARY KEY (signature_id, kind)
 );
 
 CREATE TABLE mapping_signature_github (

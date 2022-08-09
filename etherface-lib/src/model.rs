@@ -2,14 +2,7 @@
 
 #![allow(clippy::extra_unused_lifetimes)] // Clippy complains about the Insertable proc-macro
 
-use crate::database::schema::etherscan_contract;
-use crate::database::schema::github_crawler_metadata;
-use crate::database::schema::github_repository;
-use crate::database::schema::github_user;
-use crate::database::schema::mapping_signature_etherscan;
-use crate::database::schema::mapping_signature_fourbyte;
-use crate::database::schema::mapping_signature_github;
-use crate::database::schema::signature;
+use crate::database::schema::*;
 use chrono::DateTime;
 use chrono::Utc;
 use diesel::Insertable;
@@ -177,6 +170,7 @@ pub struct Signature {
     pub id: i32,
     pub text: String,
     pub hash: String,
+    pub is_valid: bool,
     pub added_at: DateTime<Utc>,
 }
 
@@ -185,6 +179,7 @@ pub struct Signature {
 pub struct SignatureInsert<'a> {
     pub text: &'a str,
     pub hash: &'a str,
+    pub is_valid: bool,
     pub added_at: DateTime<Utc>,
 }
 
@@ -221,6 +216,13 @@ pub struct MappingSignatureFourbyte {
     pub added_at: DateTime<Utc>,
 }
 
+#[derive(Queryable, Insertable)]
+#[table_name = "mapping_signature_kind"]
+pub struct MappingSignatureKind {
+    pub signature_id: i32,
+    pub kind: SignatureKind,
+}
+
 impl SignatureWithMetadata {
     pub fn new(text: String, kind: SignatureKind) -> Self {
         let hash = format!("{:x}", Keccak256::digest(&text));
@@ -232,6 +234,7 @@ impl SignatureWithMetadata {
         SignatureInsert {
             text: &self.text,
             hash: &self.hash,
+            is_valid: true,
             added_at: Utc::now(),
         }
     }

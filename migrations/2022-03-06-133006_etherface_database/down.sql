@@ -5,8 +5,9 @@ DROP TABLE mapping_signature_github;
 
 DROP TABLE signature;
 DROP TABLE etherscan_contract;
+DROP TABLE github_crawler_metadata;
 DROP TABLE github_repository;
 DROP TABLE github_user;
-DROP TABLE github_crawler_metadata;
+DROP TABLE mapping_signature_kind;
 
 DROP TYPE signature_kind;
