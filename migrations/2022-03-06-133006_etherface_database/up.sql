@@ -103,10 +103,3 @@ CREATE TABLE mapping_signature_fourbyte (
 
     PRIMARY KEY (signature_id, kind)
 );
-
-CREATE TABLE mapping_stargazer (
-    user_id         INT NOT NULL REFERENCES github_user         (id),
-    repository_id   INT NOT NULL REFERENCES github_repository   (id),
-
-    PRIMARY KEY (user_id, repository_id)
-);

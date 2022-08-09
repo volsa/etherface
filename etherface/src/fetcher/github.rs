@@ -4,7 +4,7 @@
 //! focused crawling. This is done with event-threads, where 3 events exist namely [`Event::SearchRepositories`],
 //! [`Event::CheckRepositories`] and [`Event::CheckUsers`]. These events are triggered periodically using
 //! [`start_background_event`] sending a message with `std::sync:mpsc` to the fetchers main-loop.
-//! Within the main-loop either [`GithubCrawler::start_one_crawling_iteration`] is executed or an event if 
+//! Within the main-loop either [`GithubCrawler::start_one_crawling_iteration`] is executed or an event if
 //! triggered. The main-loop, using `std::sync:mpsc`, operates in a FIFO manner meaning events may need to wait
 //! until one crawling iteration / other currently curring event has successfuly terminated.
 //! //! <div align="center">
@@ -20,7 +20,6 @@ use etherface_lib::database::handler::DatabaseClient;
 use etherface_lib::error::Error;
 use etherface_lib::model::GithubRepository;
 use etherface_lib::model::GithubUser;
-use etherface_lib::model::MappingStargazer;
 use log::debug;
 use log::info;
 use std::sync::mpsc;
@@ -141,7 +140,7 @@ impl GithubCrawler {
     /// Check if there are any unvisited Solidity repository owners (GitHub users)
     ///     Yes => Take the first [`NUM_RESOURCE_VISITS_PER_CRAWLING_ITERATION`] owners from the database and
     ///            retrieve their owned + starred repositories; set them as visited
-    ///     No  => Take the first [`NUM_RESOURCE_VISITS_PER_CRAWLING_ITERATION`] unvisited repositories from 
+    ///     No  => Take the first [`NUM_RESOURCE_VISITS_PER_CRAWLING_ITERATION`] unvisited repositories from
     ///            the database and for each one of them fetch their stargazers; for each fetched stargazer
     ///            retrieve their owner + starred repositories; set them and the repository as visited
     fn start_one_crawling_iteration(&self) -> Result<(), Error> {
@@ -195,12 +194,6 @@ impl GithubCrawler {
 
                         self.get_and_insert_user_owned_repos(stargazer.id, true)?;
                         self.get_and_insert_user_starred_repos(stargazer.id, true)?;
-
-                        self.dbc.mapping_stargazer().insert(&MappingStargazer {
-                            user_id: stargazer.id,
-                            repository_id: repo.id,
-                        });
-
                         self.dbc.github_user().set_visited(stargazer.id);
                     }
 
@@ -229,10 +222,6 @@ impl GithubCrawler {
         if let Ok(repos) = self.ghc.user(user_id).starred() {
             for repo in repos {
                 self.insert_repository_if_not_exists(&repo, crawled)?;
-                self.dbc.mapping_stargazer().insert(&MappingStargazer {
-                    user_id,
-                    repository_id: repo.id,
-                });
             }
         }
 

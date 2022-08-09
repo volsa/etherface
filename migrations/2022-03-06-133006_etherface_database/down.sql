@@ -2,7 +2,6 @@
 DROP TABLE mapping_signature_etherscan;
 DROP TABLE mapping_signature_fourbyte;
 DROP TABLE mapping_signature_github;
-DROP TABLE mapping_stargazer;
 
 DROP TABLE signature;
 DROP TABLE etherscan_contract;

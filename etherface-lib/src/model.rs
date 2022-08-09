@@ -1,4 +1,5 @@
 //! Structs that are both used in the GitHub API as well as the Database schema / bindings.
+
 #![allow(clippy::extra_unused_lifetimes)] // Clippy complains about the Insertable proc-macro
 
 use crate::database::schema::etherscan_contract;
@@ -8,7 +9,6 @@ use crate::database::schema::github_user;
 use crate::database::schema::mapping_signature_etherscan;
 use crate::database::schema::mapping_signature_fourbyte;
 use crate::database::schema::mapping_signature_github;
-use crate::database::schema::mapping_stargazer;
 use crate::database::schema::signature;
 use chrono::DateTime;
 use chrono::Utc;
@@ -221,13 +221,6 @@ pub struct MappingSignatureFourbyte {
     pub signature_id: i32,
     pub kind: SignatureKind,
     pub added_at: DateTime<Utc>,
-}
-
-#[derive(Queryable, Insertable, Debug)]
-#[table_name = "mapping_stargazer"]
-pub struct MappingStargazer {
-    pub user_id: i32,
-    pub repository_id: i32,
 }
 
 impl SignatureWithMetadata {

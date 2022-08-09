@@ -5,7 +5,6 @@ pub mod github_user;
 pub mod mapping_signature_etherscan;
 pub mod mapping_signature_fourbyte;
 pub mod mapping_signature_github;
-pub mod mapping_stargazer;
 pub mod rest;
 pub mod signature;
 
@@ -17,7 +16,6 @@ use crate::database::handler::github_user::GithubUserHandler;
 use crate::database::handler::mapping_signature_etherscan::MappingSignatureEtherscanHandler;
 use crate::database::handler::mapping_signature_fourbyte::MappingSignatureFourbyteHandler;
 use crate::database::handler::mapping_signature_github::MappingSignatureGithubHandler;
-use crate::database::handler::mapping_stargazer::MappingStargazerHandler;
 use crate::database::handler::rest::RestHandler;
 use crate::database::handler::signature::SignatureHandler;
 use crate::error::Error;
@@ -89,10 +87,6 @@ impl DatabaseClient {
 
     pub fn mapping_signature_github(&self) -> MappingSignatureGithubHandler {
         MappingSignatureGithubHandler::new(&self.connection)
-    }
-
-    pub fn mapping_stargazer(&self) -> MappingStargazerHandler {
-        MappingStargazerHandler::new(&self.connection)
     }
 
     pub fn crawler_metadata(&self) -> GithubCrawlerMetadataHandler {
