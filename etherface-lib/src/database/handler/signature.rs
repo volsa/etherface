@@ -26,14 +26,13 @@ impl<'a> SignatureHandler<'a> {
     }
 
     pub fn insert(&self, entity: &SignatureWithMetadata) -> Signature {
-        if let Some(val) = self.get_by_hash(&entity.hash) {
-            return val;
-        }
-
-        let res: Signature = diesel::insert_into(signature::table)
-            .values(&entity.to_insertable())
-            .get_result(self.connection)
-            .unwrap();
+        let res = match self.get_by_hash(&entity.hash) {
+            Some(val) => val,
+            None => diesel::insert_into(signature::table)
+                .values(&entity.to_insertable())
+                .get_result(self.connection)
+                .unwrap(),
+        };
 
         diesel::insert_into(mapping_signature_kind::table)
             .values(&MappingSignatureKind {
