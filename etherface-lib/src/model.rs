@@ -188,6 +188,7 @@ pub struct SignatureWithMetadata {
     pub text: String,
     pub hash: String,
     pub kind: SignatureKind,
+    pub is_valid: bool,
 }
 
 #[derive(Queryable, Insertable)]
@@ -224,17 +225,22 @@ pub struct MappingSignatureKind {
 }
 
 impl SignatureWithMetadata {
-    pub fn new(text: String, kind: SignatureKind) -> Self {
+    pub fn new(text: String, kind: SignatureKind, is_valid: bool) -> Self {
         let hash = format!("{:x}", Keccak256::digest(&text));
 
-        Self { text, hash, kind }
+        Self {
+            text,
+            hash,
+            kind,
+            is_valid,
+        }
     }
 
     pub fn to_insertable(&self) -> SignatureInsert {
         SignatureInsert {
             text: &self.text,
             hash: &self.hash,
-            is_valid: true,
+            is_valid: self.is_valid,
             added_at: Utc::now(),
         }
     }

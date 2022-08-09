@@ -45,7 +45,7 @@ impl FourbyteClient {
             let mut signatures = Vec::new();
             for signature in page.results {
                 signatures
-                    .push(SignatureWithMetadata::new(signature.text_signature, SignatureKind::Function));
+                    .push(SignatureWithMetadata::new(signature.text_signature, SignatureKind::Function, true));
             }
 
             return Ok(Some(signatures));
@@ -61,7 +61,7 @@ impl FourbyteClient {
 
             let mut signatures = Vec::new();
             for signature in page.results {
-                signatures.push(SignatureWithMetadata::new(signature.text_signature, SignatureKind::Event));
+                signatures.push(SignatureWithMetadata::new(signature.text_signature, SignatureKind::Event, true));
             }
 
             return Ok(Some(signatures));

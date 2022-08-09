@@ -66,6 +66,22 @@ lazy_static! {
             )?                                                      # End of **optional** visibility group (indicated by ?)
         ").unwrap();
 
+    static ref REGEX_PARAMETER_TYPES: Regex = Regex::new(
+        r"(?x)
+            (   
+                (
+                    address|
+                    bool|
+                    string|
+                    bytes(\d{0,3})?|
+                    int(\d{0,3})?|
+                    uint(\d{0,3})?|
+                    fixed|
+                    ufixed
+                )
+            (\[\d*\])*)                 # (optional) Array declaration (0 - * times)
+        ").unwrap();
+
     // The `REGEX_SIGNATURE` pattern only recognizes signatures defined within a line, as such multi-line
     // signatures won't be detected by default. To bypass this we have to remove all newlines[0] as well a
     // code-comments[1] before actually starting to extract signatures from an arbitrary Solidity file.
@@ -127,7 +143,7 @@ pub fn from_abi(content: &str) -> Result<Vec<SignatureWithMetadata>, Error> {
                 .join(",")
         );
 
-        signatures.push(SignatureWithMetadata::new(text, kind));
+        signatures.push(SignatureWithMetadata::new(text, kind, true));
     }
 
     Ok(signatures)
@@ -143,19 +159,38 @@ pub fn from_sol(content: &str) -> Vec<SignatureWithMetadata> {
     for capture in REGEX_SIGNATURE.captures_iter(&content_processed) {
         let name = capture.name("name").unwrap().as_str();
         let kind: SignatureKind = capture.name("kind").unwrap().as_str().parse().unwrap();
-        let params = capture.name("params").unwrap().as_str();
 
-        let text = format!("{}({})", name, get_joined_parameter_types(params));
+        let (text, is_valid) = match get_split_parameter_list(capture.name("params").unwrap().as_str()) {
+            Some(list) => (format!("{name}({})", list.join(",")), parameter_types_are_valid(&list)),
+            None => (format!("{name}()"), true),
+        };
 
-        signatures.push(SignatureWithMetadata::new(text, kind));
+        // let is_valid = parameter_types_are_valid(&params);
+        // let text = format!("{}({})", name, get_joined_parameter_types(params));
+
+        signatures.push(SignatureWithMetadata::new(text, kind, is_valid));
     }
 
     signatures
 }
 
-fn get_joined_parameter_types(raw_parameter_list: &str) -> String {
+fn parameter_types_are_valid(params: &Vec<String>) -> bool {
+    for param in params {
+        if !REGEX_PARAMETER_TYPES.is_match(param) {
+            if param.is_empty() {
+                continue;
+            }
+
+            return false;
+        }
+    }
+
+    true
+}
+
+fn get_split_parameter_list(raw_parameter_list: &str) -> Option<Vec<String>> {
     if raw_parameter_list.trim().is_empty() {
-        return "".to_string();
+        return None;
     }
 
     // Assuming raw_parameter_list equals "  address to, uint amount  "  we would first split the String at
@@ -174,24 +209,22 @@ fn get_joined_parameter_types(raw_parameter_list: &str) -> String {
     let mut param_types = Vec::new();
     for param in raw_parameter_list.split(',') {
         match param.trim().split_once(' ') {
-            Some(val) => param_types.push(val.0),
+            Some(val) => param_types.push(val.0.to_string()),
 
             // Unnamed parameter
-            None => param_types.push(param.trim()),
+            None => param_types.push(param.trim().to_string()),
         }
     }
 
-    match param_types.len() {
-        0 => panic!("This should definitely not happen"), // covered by the is_empty check at the beginning
-        1 => param_types[0].to_string(),                  // param_types == ["address"]
-        _ => param_types.join(","),                       // param_types == ["address", "uint",...]
-    }
+    Some(param_types)
 }
 
 #[cfg(test)]
 mod tests {
     use crate::parser;
     use crate::parser::SignatureKind;
+
+    use super::parameter_types_are_valid;
 
     #[test]
     fn from_str_signaturekind() {
@@ -213,20 +246,41 @@ mod tests {
     }
 
     #[test]
+    #[rustfmt::skip]
     fn get_joined_parameter_types() {
-        assert_eq!(&parser::get_joined_parameter_types(""), "");
-        assert_eq!(&parser::get_joined_parameter_types("   "), "");
-        assert_eq!(&parser::get_joined_parameter_types("address foo"), "address");
-        assert_eq!(&parser::get_joined_parameter_types("   address foo "), "address");
-        assert_eq!(&parser::get_joined_parameter_types("address foo, uint256[] bar"), "address,uint256[]");
-        assert_eq!(
-            &parser::get_joined_parameter_types("  address foo, uint256[] bar    "),
-            "address,uint256[]"
-        );
-        assert_eq!(
-            &parser::get_joined_parameter_types(" address   foo, uint256[] bar   "),
-            "address,uint256[]"
-        );
+        assert_eq!(parser::get_split_parameter_list(""), None);
+        assert_eq!(parser::get_split_parameter_list("   "), None);
+        assert_eq!(parser::get_split_parameter_list("address foo"), Some(vec!["address".into()]));
+        assert_eq!(parser::get_split_parameter_list("   address foo "), Some(vec!["address".into()]));
+        assert_eq!(parser::get_split_parameter_list("address foo, uint256[] bar"), Some(vec!["address".into(),"uint256[]".into()]));
+        assert_eq!(parser::get_split_parameter_list("  address foo, uint256[] bar    "), Some(vec!["address".into(),"uint256[]".into()]));
+        assert_eq!(parser::get_split_parameter_list(" address   foo, uint256[] bar   "), Some(vec!["address".into(),"uint256[]".into()]));
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn check_validity() {
+        let valid_param_types: Vec<Vec<String>> = vec![
+            vec!["".into()],
+            "uint256,address,uint8,uint8,uint256".split(",").map(str::to_string).collect(),
+            "address,address[]".split(",").map(str::to_string).collect(),
+            "address[],address[],uint256[],uint256[],uint256[],uint256".split(",").map(str::to_string).collect(),
+            "address[],uint256[],uint256[][]".split(",").map(str::to_string).collect(),
+        ];
+
+        let invalid_param_types: Vec<Vec<String>> = vec![
+            "IUniswapV2Pair,uint256,uint256,uint256,address".split(",").map(str::to_string).collect(),
+            "ISolidlyLens.PositionVe[]".split(",").map(str::to_string).collect(),
+            "uint256,address,bytes32,string,ITerminal,address".split(",").map(str::to_string).collect(),
+        ];
+
+        for params in valid_param_types {
+            assert_eq!(parameter_types_are_valid(&params), true);
+        }
+        
+        for params in invalid_param_types {
+            assert_eq!(parameter_types_are_valid(&params), false);
+        }
     }
 
     #[test]
