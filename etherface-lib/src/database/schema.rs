@@ -39,7 +39,6 @@ table! {
         stargazers_count -> Int4,
         size -> Int4,
         fork -> Bool,
-        fork_parent_id -> Nullable<Int4>,
         created_at -> Timestamptz,
         pushed_at -> Timestamptz,
         updated_at -> Timestamptz,

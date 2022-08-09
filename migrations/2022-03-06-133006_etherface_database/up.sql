@@ -32,7 +32,6 @@ CREATE TABLE github_repository (
     stargazers_count    INT                         NOT NULL,
     size                INT                         NOT NULL,
     fork                BOOLEAN                     NOT NULL,
-    fork_parent_id      INT,
     created_at          TIMESTAMP WITH TIME ZONE    NOT NULL,
     pushed_at           TIMESTAMP WITH TIME ZONE    NOT NULL,
     updated_at          TIMESTAMP WITH TIME ZONE    NOT NULL,
@@ -42,14 +41,12 @@ CREATE TABLE github_repository (
     scraped_at          TIMESTAMP WITH TIME ZONE,               -- date we last scraped signatures from the repository
     visited_at          TIMESTAMP WITH TIME ZONE,               -- date we last visited the repository
     added_at            TIMESTAMP WITH TIME ZONE    NOT NULL,   -- date we added the repository into the database
-
     solidity_ratio      REAL,
     is_deleted          BOOLEAN                     NOT NULL, -- flag indicating if repository is deleted 
     found_by_crawling   BOOLEAN                     NOT NULL, -- flag indicating if repository was found using the API search endpoint or by crawling
 
     PRIMARY KEY (id),
     FOREIGN KEY (owner_id)          REFERENCES github_user (id),
-    FOREIGN KEY (fork_parent_id)    REFERENCES github_repository (id)
 );
 
 CREATE TABLE etherscan_contract (
