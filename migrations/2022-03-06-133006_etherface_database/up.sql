@@ -77,7 +77,7 @@ CREATE TABLE signature (
 );
 
 CREATE TABLE mapping_signature_kind (
-    signature_id    INT             NOT NULL,
+    signature_id    INT             NOT NULL REFERENCES signature (id),
     kind            SIGNATURE_KIND  NOT NULL,
 
     PRIMARY KEY (signature_id, kind)

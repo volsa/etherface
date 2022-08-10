@@ -129,6 +129,7 @@ joinable!(mapping_signature_etherscan -> signature (signature_id));
 joinable!(mapping_signature_fourbyte -> signature (signature_id));
 joinable!(mapping_signature_github -> github_repository (repository_id));
 joinable!(mapping_signature_github -> signature (signature_id));
+joinable!(mapping_signature_kind -> signature (signature_id));
 
 allow_tables_to_appear_in_same_query!(
     etherscan_contract,
