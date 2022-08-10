@@ -5,14 +5,7 @@ CREATE MATERIALIZED VIEW view_signatures_popular_on_github AS
 	SELECT signature."text", COUNT(*) FROM signature JOIN mapping_signature_github ON signature.id = mapping_signature_github.signature_id GROUP BY 1 ORDER BY 2 DESC LIMIT 100;
 
 CREATE MATERIALIZED VIEW view_signature_kind_distribution AS 
-	SELECT kind, COUNT(DISTINCT signature_id) FROM (
-		SELECT kind, signature_id FROM mapping_signature_github
-		UNION ALL
-		SELECT kind, signature_id FROM mapping_signature_etherscan
-		UNION ALL 
-		SELECT kind, signature_id FROM mapping_signature_fourbyte 
-		) AS unions
-	GROUP BY 1;
+	SELECT kind, COUNT(*) FROM mapping_signature_kind GROUP BY 1;
 
 CREATE MATERIALIZED VIEW view_signature_count_statistics AS 
 	SELECT 	(SELECT COUNT(*) as signature_count FROM signature) 
