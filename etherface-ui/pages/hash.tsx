@@ -4,7 +4,7 @@ import Alert from '../components/Alert'
 import Navbar from '../components/Navbar'
 import SearchBar from '../components/SearchBar'
 import Table from '../components/Table'
-import { Response, Signature } from '../lib/types'
+import { Response, Signature, SignatureKind } from '../lib/types'
 import Head from 'next/head'
 
 
@@ -12,6 +12,7 @@ import Head from 'next/head'
 const Hash = () => {
     const [input, setInput] = useState('')
     const [query, setQuery] = useState('')
+    const [queryKind, setQueryKind] = useState<SignatureKind | null>()
     const [errorCode, setErrorCode] = useState<number | null>()
     const [hashCollision, setHashCollision] = useState(false)
     const [signature, setSignature] = useState<Signature | null>()
@@ -86,7 +87,30 @@ const Hash = () => {
 
     const submitHandler = (event) => {
         event.preventDefault()
+
+        if (input.startsWith('f#')) {
+            setQuery(input.slice(2))
+            setQueryKind(SignatureKind.Function)
+            setSignature(null);
+            return;
+        }
+
+        if (input.startsWith('e#')) {
+            setQuery(input.slice(2))
+            setQueryKind(SignatureKind.Event)
+            setSignature(null);
+            return;
+        }
+
+        if (input.startsWith('err#')) {
+            setQuery(input.slice(4))
+            setQueryKind(SignatureKind.Error)
+            setSignature(null);
+            return;
+        }
+
         setQuery(input)
+        setQueryKind(SignatureKind.All)
         setSignature(null);
     }
 
@@ -99,7 +123,7 @@ const Hash = () => {
         setErrorCode(null);
 
         let response = await axios.get(
-            `${process.env.ETHERFACE_REST_ADDRESS}/v1/signatures/hash/${query}/${page}`, {
+            `${process.env.ETHERFACE_REST_ADDRESS}/v1/signatures/hash/${queryKind}/${query}/${page}`, {
             validateStatus: null // https://axios-http.com/docs/req_config
         }
         );
@@ -133,7 +157,7 @@ const Hash = () => {
     const fetcherGithubEndpoint = async (query: string, page: number) => {
         setErrorCode(null);
         let response = await axios.get(
-            `${process.env.ETHERFACE_REST_ADDRESS}/v1/sources/github/${query}/${page}`, {
+            `${process.env.ETHERFACE_REST_ADDRESS}/v1/sources/github/${queryKind}/${query}/${page}`, {
             validateStatus: null // https://axios-http.com/docs/req_config
         }
         );
@@ -156,7 +180,7 @@ const Hash = () => {
     const fetcherEtherscanEndpoint = async (query: string, page: number) => {
         setErrorCode(null);
         let response = await axios.get(
-            `${process.env.ETHERFACE_REST_ADDRESS}/v1/sources/etherscan/${query}/${page}`, {
+            `${process.env.ETHERFACE_REST_ADDRESS}/v1/sources/etherscan/${queryKind}/${query}/${page}`, {
             validateStatus: null // https://axios-http.com/docs/req_config
         }
         );
