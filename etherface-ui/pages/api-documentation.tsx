@@ -9,7 +9,7 @@ const LinkItem = ({ text, url }) => {
 
 const Paragraph = ({ title, content }) => {
     return (
-        <div className='w-11/12 2xl:w-1/2  border rounded-md mt-4'>
+        <div className='w-11/12 2xl:w-1/2 mt-4'>
             <div className='p-4'>
                 <div className='text-2xl text-black mb-1'>{title}</div>
                 <div className='text text-gray-600'>{content}</div>
@@ -26,7 +26,7 @@ const ApiDocumentation = () => {
 
             <div className='flex flex-col items-center'>
                 <Paragraph
-                    title='Some goodies'
+                    title='Introduction'
                     content={
                         <div>
                             <ul className='list-disc list-inside'>
