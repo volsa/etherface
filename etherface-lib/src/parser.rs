@@ -1,3 +1,25 @@
+//! (RegEx) Parser responsible for extracting function, event and error signatures from arbitrary Solidity / 
+//! ABI files.
+//! 
+//! For Solidity files the parser works by using RegEx patterns to extract signatures such as 
+//! `function foobar(uint256 val) external payable {` from e.g.
+//! ```
+//! pragma Solidity 0.8.14; 
+//! contract Example {
+//!     // ...
+//!     function foobar(uint256 val) external payable {
+//!         // ...
+//!     }
+//!     // ...
+//! }
+//! ```
+//! which can then be further used to extract the signature type (`function` in this case) as well as the 
+//! canonical signature (`foobar(uint256)` in this case). These extracted informations are then stored inside
+//! a [`SignatureWithMetadata`] struct and returned to the caller.
+//! 
+//! For ABI (= JSON) files the parser simply uses serde to deserialize the content and assemble all extracted
+//! data to form the canonical signature.
+
 use crate::error::Error;
 use crate::model::SignatureKind;
 use crate::model::SignatureWithMetadata;
@@ -111,8 +133,7 @@ lazy_static! {
         ").multi_line(true).build().unwrap();
 }
 
-/// Deserializes a JSON ABI file returning a vector of [`Signature`] with [`SignatureKind`] being one of
-/// [`SignatureKind::Function`], [`SignatureKind::Event`] or [`SignatureKind::Error`].
+/// Returns a list of [`SignatureWithMetadata`] extracted from a JSON ABI file.
 pub fn from_abi(content: &str) -> Result<Vec<SignatureWithMetadata>, Error> {
     let mut signatures = Vec::new();
 
@@ -149,8 +170,7 @@ pub fn from_abi(content: &str) -> Result<Vec<SignatureWithMetadata>, Error> {
     Ok(signatures)
 }
 
-/// Parses Solidity source code returning a vector of [`Signature`] with [`SignatureKind`] being one of
-/// [`SignatureKind::Function`], [`SignatureKind::Event`] or [`SignatureKind::Error`].
+/// Returns a list of [`SignatureWithMetadata`] extracted from a Solidity file.
 pub fn from_sol(content: &str) -> Vec<SignatureWithMetadata> {
     let mut signatures = Vec::new();
 
@@ -174,6 +194,8 @@ pub fn from_sol(content: &str) -> Vec<SignatureWithMetadata> {
     signatures
 }
 
+/// Checks whether or not the given parameter type is valid, i.e. not an user defined type (see 
+/// <https://blog.soliditylang.org/2021/09/27/user-defined-value-types/>).
 fn parameter_types_are_valid(params: &Vec<String>) -> bool {
     for param in params {
         if !REGEX_PARAMETER_TYPES.is_match(param) {
@@ -188,6 +210,7 @@ fn parameter_types_are_valid(params: &Vec<String>) -> bool {
     true
 }
 
+/// Converts and returns a parameter list such as `uint foo, uint bar` to a vector of `[uint, uint]`.
 fn get_split_parameter_list(raw_parameter_list: &str) -> Option<Vec<String>> {
     if raw_parameter_list.trim().is_empty() {
         return None;

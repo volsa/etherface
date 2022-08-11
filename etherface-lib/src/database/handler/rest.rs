@@ -1,3 +1,5 @@
+//! `/v1/` REST API handler.
+
 use crate::database::pagination::Paginate;
 use crate::model::views::ViewSignatureCountStatistics;
 use crate::model::views::ViewSignatureInsertRate;

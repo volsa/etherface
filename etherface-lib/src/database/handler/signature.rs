@@ -1,3 +1,5 @@
+//! `signature` table handler.
+
 use crate::database::schema::mapping_signature_kind;
 use crate::database::schema::signature;
 use crate::database::schema::signature::dsl::*;

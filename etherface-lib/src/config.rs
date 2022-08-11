@@ -1,12 +1,22 @@
-use std::path::Path;
+//! Config manager, reading the content of the `.env` file.
+//! 
+//! Reads all content from `.env` into [`Config`] for all sub-modules to use.
 
 use crate::error::Error;
 use dotenv::dotenv;
+use std::path::Path;
 
 pub struct Config {
+    /// Database URL with the following structure `postgres://username:password@host/database_name`.
     pub database_url: String,
+
+    /// Etherscan API token.
     pub token_etherscan: String,
+
+    /// GitHub API tokens.
     pub tokens_github: Vec<String>,
+
+    /// Etherface REST API address, e.g. <https://api.etherface.io>
     pub rest_address: String,
 }
 
@@ -27,6 +37,7 @@ fn read_and_return_env_var(env_var: &'static str) -> Result<String, Error> {
 }
 
 impl Config {
+    /// Returns a new config manager, reading the content of `.env`.
     pub fn new() -> Result<Self, Error> {
         match Path::new(".env").exists() {
             true => dotenv()?,

@@ -1,3 +1,13 @@
+//! GitHub API token manager.
+//! 
+//! Because GitHub has a ratelimit of 5000 requests / hour, which for crawling purposes is very little, 
+//! Etherface uses multiple GitHub API tokens. For that some logic reagarding which token should be actively
+//! used is needed, which this module does. In basic terms all tokens are read from the config file and stored
+//! in an internal token pool. Initially the first token in the token pool will be used for all GitHub API
+//! requests. If, however, the active token is drained, i.e. all 5000 requests / hour have been reached, the 
+//! token manager will automatically find a new token in the pool to temporarily replace the old active token
+//! (see the [`refresh`] function). As such the GitHub API client doesn't have to worry about token managment.
+
 use crate::api::github::GITHUB_RATELIMIT_URL;
 use crate::api::RequestHandler;
 use crate::api::TokenManagerResponseHandler;
@@ -6,6 +16,9 @@ use crate::error::Error;
 use log::info;
 use log::warn;
 use serde::Deserialize;
+
+/// Sleep duration if all API tokens are drained.
+const SLEEP_DURATION_TOKENS_DRAINED: u64 = 5 * 60;
 
 #[derive(Debug, Deserialize)]
 struct RatelimitRoot {
@@ -30,6 +43,7 @@ pub(crate) struct TokenManager {
 }
 
 impl TokenManager {
+    /// Returns a new token manager.
     pub fn new() -> Result<Self, Error> {
         let tokens = Config::new()?.tokens_github;
 
@@ -43,8 +57,9 @@ impl TokenManager {
         Ok(manager)
     }
 
-    /// Find and replace the active GitHub token with one that has more API calls.
-    /// If none can be found, that is all tokens are drained, this method will sleep for 5 minutes.
+    /// Finds and replaces the active GitHub token with one that has more remaining API calls.
+    /// If none can be found, that is all tokens are drained, this method will sleep for
+    /// [`SLEEP_DURATION_TOKENS_DRAINED`] minutes.
     pub fn refresh(&mut self) -> Result<(), Error> {
         if let Ok(ratelimit) = self.execute(&self.active) {
             if ratelimit.search.remaining == 0 {
@@ -80,9 +95,8 @@ impl TokenManager {
 
         match best.1 {
             0 => {
-                let sleep_duration = 5 * 60;
-                info!("All tokens drained, sleeping {} seconds", sleep_duration);
-                std::thread::sleep(std::time::Duration::from_secs(sleep_duration));
+                info!("All tokens drained, sleeping {SLEEP_DURATION_TOKENS_DRAINED} seconds");
+                std::thread::sleep(std::time::Duration::from_secs(SLEEP_DURATION_TOKENS_DRAINED));
             }
             _ => {
                 info!("Replacing activen token {} with {}", self.active, best.0);
@@ -93,7 +107,7 @@ impl TokenManager {
         Ok(())
     }
 
-    /// Find and remove all invalid tokens from the token pool.
+    /// Finds and removes all invalid tokens from the token pool.
     pub fn cleanup(&mut self) -> Result<(), Error> {
         let mut invalid_tokens: Vec<String> = Vec::new();
         for token in &self.pool {

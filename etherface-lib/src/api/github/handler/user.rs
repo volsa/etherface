@@ -1,3 +1,5 @@
+//! `/user` endpoint handler.
+
 use crate::api::github::page::Page;
 use crate::api::github::GithubClient;
 use crate::error::Error;
@@ -10,20 +12,23 @@ pub struct UserHandler<'a> {
 }
 
 impl<'a> UserHandler<'a> {
-    pub fn new(ghc: &'a GithubClient, id: i32) -> Self {
+    pub(crate) fn new(ghc: &'a GithubClient, id: i32) -> Self {
         UserHandler { ghc, id }
     }
 
+    /// Returns the deserialized JSON `/user/{id}` response.
     pub fn get(&self) -> Result<GithubUser, Error> {
         let path = format!("user/{id}", id = self.id);
         Ok(self.ghc.execute(&path)?.json().unwrap())
     }
 
+    /// Returns the deserialized JSON `/user/{id}/starred` response.
     pub fn starred(&self) -> Result<Vec<GithubRepository>, Error> {
         let path = format!("user/{id}/starred", id = self.id,);
         Page::all_pages(self.ghc, path)
     }
 
+    /// Returns the deserialized JSON `/user/{id}/repos` response.
     pub fn repos(&self) -> Result<Vec<GithubRepository>, Error> {
         let path = format!("user/{id}/repos", id = self.id,);
         Page::all_pages(self.ghc, path)

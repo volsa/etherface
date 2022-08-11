@@ -1,3 +1,8 @@
+//! Pagination support for diesel queries.
+//! 
+//! Wraps a `SELECT *, COUNT(*) OVER () FROM ( {query} ) t LIMIT {page_size} OFFSET {page_index}` over the
+//! `query`. Modified version taken from <https://github.com/diesel-rs/diesel/blob/master/examples/postgres/advanced-blog-cli/src/pagination.rs>.
+
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::query_builder::*;
@@ -39,14 +44,6 @@ impl<T> Paginated<T> {
         let total_pages = (total as f64 / per_page as f64).ceil() as i64;
         Ok((records, total, total_pages))
     }
-
-    // pub fn per_page(self, per_page: i64) -> Self {
-    //     Paginated {
-    //         per_page,
-    //         offset: (self.page - 1) * per_page,
-    //         ..self
-    //     }
-    // }
 }
 
 impl<T: Query> Query for Paginated<T> {

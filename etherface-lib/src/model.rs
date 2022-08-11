@@ -185,9 +185,16 @@ pub struct SignatureInsert<'a> {
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Hash)]
 pub struct SignatureWithMetadata {
+    /// The signatures text representation / canonical form, e.g. `balanceOf(address)`.
     pub text: String,
+
+    /// The [`SignatureWithMetadata::text`]s hash.
     pub hash: String,
+
+    /// The signatures kind.
     pub kind: SignatureKind,
+
+    /// Whether or not the signature has an user defined parameter type (see <https://blog.soliditylang.org/2021/09/27/user-defined-value-types/>).
     pub is_valid: bool,
 }
 

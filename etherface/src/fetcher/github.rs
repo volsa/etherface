@@ -99,7 +99,7 @@ impl GithubCrawler {
                 Ok(msg) => match msg.event {
                     Event::SearchRepositories => {
                         debug!("Starting SearchRepositories event");
-                        let prev_event_date = self.dbc.crawler_metadata().get().last_repository_search.date();
+                        let prev_event_date = self.dbc.github_crawler_metadata().get().last_repository_search.date();
 
                         debug!("Prev event date: {prev_event_date}");
                         self.insert_recently_created_solidity_repositories(prev_event_date)?;
@@ -107,8 +107,8 @@ impl GithubCrawler {
 
                         // Only set if previous function calls were successful
                         debug!("Prev event date: {}", msg.new_event_date);
-                        self.dbc.crawler_metadata().update_last_repository_search_date(msg.new_event_date);
-                        debug!("{}", self.dbc.crawler_metadata().get().last_repository_search.date());
+                        self.dbc.github_crawler_metadata().update_last_repository_search_date(msg.new_event_date);
+                        debug!("{}", self.dbc.github_crawler_metadata().get().last_repository_search.date());
                     }
 
                     Event::CheckRepositories => {
@@ -116,7 +116,7 @@ impl GithubCrawler {
                         self.find_repository_updates(180)?;
 
                         // Only set if previous function calls were successful
-                        self.dbc.crawler_metadata().update_last_repository_check_date(msg.new_event_date);
+                        self.dbc.github_crawler_metadata().update_last_repository_check_date(msg.new_event_date);
                     }
 
                     Event::CheckUsers => {
@@ -124,7 +124,7 @@ impl GithubCrawler {
                         self.find_user_updates(180)?;
 
                         // Only set if previous commands were successful
-                        self.dbc.crawler_metadata().update_last_user_check_date(msg.new_event_date);
+                        self.dbc.github_crawler_metadata().update_last_user_check_date(msg.new_event_date);
                     }
                 },
 
@@ -433,9 +433,9 @@ fn start_background_event(
 ) -> Result<(), Error> {
     let dbc = DatabaseClient::new()?;
     let last_event_date = match event {
-        Event::SearchRepositories => dbc.crawler_metadata().get().last_repository_search,
-        Event::CheckRepositories => dbc.crawler_metadata().get().last_repository_check,
-        Event::CheckUsers => dbc.crawler_metadata().get().last_user_check,
+        Event::SearchRepositories => dbc.github_crawler_metadata().get().last_repository_search,
+        Event::CheckRepositories => dbc.github_crawler_metadata().get().last_repository_check,
+        Event::CheckUsers => dbc.github_crawler_metadata().get().last_user_check,
     };
 
     std::thread::spawn(move || {

@@ -1,3 +1,5 @@
+//! GitHub, Etherscan and 4Byte API clients.
+
 use crate::api::github::token::TokenManager;
 use crate::error::Error;
 use log::debug;

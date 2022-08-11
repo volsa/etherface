@@ -1,3 +1,5 @@
+//! `/search` endpoint handler.
+
 use crate::api::github::page::Page;
 use crate::api::github::GithubClient;
 use crate::error::Error;
@@ -10,19 +12,22 @@ pub struct SearchHandler<'a> {
 }
 
 impl<'a> SearchHandler<'a> {
-    pub fn new(ghc: &'a GithubClient) -> Self {
+    pub(crate) fn new(ghc: &'a GithubClient) -> Self {
         SearchHandler { ghc }
     }
 
+    /// Returns the deserialized JSON `/search/repositories?q={query}` response.
     pub fn repos(&self, query: &str) -> Result<Vec<GithubRepository>, Error> {
         let path = format!("search/repositories?q={query}");
         Page::all_pages(self.ghc, path)
     }
 
+    /// Returns the deserialized JSON `/search/repositories?q=language:solidity created:{date}` response.
     pub fn solidity_repos_created_at(&self, date: Date<Utc>) -> Result<Vec<GithubRepository>, Error> {
         self.repos(&format!("language:solidity created:{}", date.format("%Y-%m-%d")))
     }
 
+    /// Returns the deserialized JSON `/search/repositories?q=language:solidity pushed:{date}` response.
     pub fn solidity_repos_updated_at(&self, date: Date<Utc>) -> Result<Vec<GithubRepository>, Error> {
         self.repos(&format!("language:solidity pushed:{}", date.format("%Y-%m-%d")))
     }
