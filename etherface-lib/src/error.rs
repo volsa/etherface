@@ -25,6 +25,9 @@ pub enum Error {
     #[error("Failed to deserialize Etherscan JSON response '{0}'; {1}")]
     EtherscanDeserializeJsonResponse(String, String),
 
+    #[error("Failed to retrieve source for '{0}'; Contract source code not verified")]
+    EtherscanContractSourceCodeNotVerified(String),
+
     // HTTP Errors
     #[error("Failed to initialize HTTP client; {0}")]
     HttpClient(#[from] reqwest::Error),
