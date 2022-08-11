@@ -98,11 +98,13 @@ const Text = () => {
                             kind='info'
                             infoMessage={
                                 <div className='flex flex-col text-left'>
-                                    <span>Some things to know:</span>
-                                    <span>- This page currently <b>only</b> supports finding signatures found on GitHub</span>
+                                    <span>Some tips:</span>
                                     <span>- Searches are case sensitive yielding signatures starting with your query</span>
-                                    <span>- Filtering by function, event or error signatures is supported by starting your query with <span className='font-mono'>f#</span>, <span className='font-mono'>e#</span> or <span className='font-mono'>#err</span> respectively, e.g.</span>
-                                    <span className='ml-4'>- <span className='font-mono'>f#balanceOf</span>, <span className='font-mono'>e#Transfer</span>, <span className='font-mono'>err#Not</span></span>
+                                    <span>- To narrow down your search to signature names only, end your query with <code>(</code>, e.g. <code>balanceOf(</code></span>
+                                    <span>- Filtering by function, event and error signatures is supported by starting your query with</span>
+                                    <span className='ml-4'>- <code>f#</code> to find functions only, e.g. <code>f#balanceOf</code></span>
+                                    <span className='ml-4'>- <code>e#</code> to find events only, e.g. <code>e#Transfer</code></span>
+                                    <span className='ml-4'>- <code>err#</code> to find errors only, e.g. <code>err#Not</code></span>
                                 </div>
                             }
                             errorMessage={undefined}
