@@ -129,7 +129,7 @@ impl GithubRepository {
     }
 }
 
-#[derive(Serialize, Queryable)]
+#[derive(Debug, Serialize, Queryable)]
 pub struct EtherscanContract {
     pub id: i32,
     pub address: String,
@@ -141,7 +141,7 @@ pub struct EtherscanContract {
     pub added_at: DateTime<Utc>,
 }
 
-#[derive(Insertable)]
+#[derive(Debug, Insertable)]
 #[table_name = "etherscan_contract"]
 pub struct EtherscanContractInsert<'a> {
     pub address: &'a str,
@@ -283,6 +283,7 @@ pub mod views {
     use diesel::sql_types::BigInt;
     use diesel::sql_types::Date;
     use diesel::sql_types::Text;
+    use diesel::sql_types::Nullable;
     use diesel::Queryable;
     use diesel::QueryableByName;
     use serde::Serialize;
@@ -322,8 +323,8 @@ pub mod views {
         #[sql_type = "BigInt"]
         average_daily_signature_insert_rate_last_week: i64,
 
-        #[sql_type = "BigInt"]
-        average_daily_signature_insert_rate_week_before_last: i64,
+        #[sql_type = "Nullable<BigInt>"]
+        average_daily_signature_insert_rate_week_before_last: Option<i64>, // This can be NULL in the first week
     }
 
     #[derive(Queryable, QueryableByName, Serialize)]
