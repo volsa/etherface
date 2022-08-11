@@ -53,7 +53,7 @@ impl<'a> RestHandler<'a> {
                             .and(signature::is_valid.eq(true))
                             .and(mapping_signature_kind::kind.eq(entity_kind)),
                     )
-                    .order_by(signature::id) // TODO: find a better way to sort?
+                    .order_by(signature::id.asc()) // TODO: find a better way to sort?
                     .select(signature::all_columns)
                     .paginate(page);
 
@@ -64,9 +64,8 @@ impl<'a> RestHandler<'a> {
 
             None => {
                 let query = signature
-                    .inner_join(mapping_signature_kind::table)
                     .filter(signature::text.like(format!("{entity_str}%")).and(signature::is_valid.eq(true)))
-                    .order_by(signature::id) // TODO: find a better way to sort?
+                    .order_by(signature::id.asc()) // TODO: find a better way to sort?
                     .select(signature::all_columns)
                     .paginate(page);
 
@@ -91,7 +90,7 @@ impl<'a> RestHandler<'a> {
         page: i64,
     ) -> Response<Signature> {
         use crate::database::schema::mapping_signature_kind;
-        use crate::database::schema::mapping_signature_kind::dsl::*;
+        // use crate::database::schema::mapping_signature_kind::dsl::*;
         use crate::database::schema::signature;
         use crate::database::schema::signature::dsl::*;
 
@@ -105,7 +104,7 @@ impl<'a> RestHandler<'a> {
                             .and(signature::is_valid.eq(true))
                             .and(mapping_signature_kind::kind.eq(entity_kind)),
                     )
-                    .order_by(signature::id)
+                    .order_by(signature::id.asc()) // TODO: find a better way to sort?
                     .select(signature::all_columns)
                     .paginate(page);
 
@@ -115,7 +114,7 @@ impl<'a> RestHandler<'a> {
             None => {
                 let query = signature
                     .filter(signature::hash.like(format!("{entity_str}%")).and(signature::is_valid.eq(true)))
-                    .order_by(signature::id)
+                    .order_by(signature::id.asc()) // TODO: find a better way to sort?
                     .select(signature::all_columns)
                     .paginate(page);
 
