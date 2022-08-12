@@ -55,7 +55,7 @@ impl<'a> RestHandler<'a> {
                             .and(signature::is_valid.eq(true))
                             .and(mapping_signature_kind::kind.eq(entity_kind)),
                     )
-                    .order_by(signature::id.asc()) // TODO: find a better way to sort?
+                    .order_by(signature::id.asc())
                     .select(signature::all_columns)
                     .paginate(page);
 
@@ -67,7 +67,7 @@ impl<'a> RestHandler<'a> {
             None => {
                 let query = signature
                     .filter(signature::text.like(format!("{entity_str}%")).and(signature::is_valid.eq(true)))
-                    .order_by(signature::id.asc()) // TODO: find a better way to sort?
+                    .order_by(signature::id.asc())
                     .select(signature::all_columns)
                     .paginate(page);
 
@@ -106,7 +106,7 @@ impl<'a> RestHandler<'a> {
                             .and(signature::is_valid.eq(true))
                             .and(mapping_signature_kind::kind.eq(entity_kind)),
                     )
-                    .order_by(signature::id.asc()) // TODO: find a better way to sort?
+                    .order_by(signature::id.asc())
                     .select(signature::all_columns)
                     .paginate(page);
 
@@ -116,7 +116,7 @@ impl<'a> RestHandler<'a> {
             None => {
                 let query = signature
                     .filter(signature::hash.like(format!("{entity_str}%")).and(signature::is_valid.eq(true)))
-                    .order_by(signature::id.asc()) // TODO: find a better way to sort?
+                    .order_by(signature::id.asc())
                     .select(signature::all_columns)
                     .paginate(page);
 

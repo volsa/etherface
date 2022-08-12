@@ -97,8 +97,7 @@ impl Scraper for GithubScraper {
                             }
 
                             _ => {
-                                // XXX: Never happend so far, hence just log for now; We could set it to scraped
-                                //      here though just like in the Ok(_) case
+                                // Never happend so far, as such we just log it for now
                                 error!("Failed to clone; {why}");
                                 continue;
                             }

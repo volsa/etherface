@@ -147,7 +147,7 @@ pub fn from_abi(content: &str) -> Result<Vec<SignatureWithMetadata>, Error> {
 
         let name_ = match abi_entry.name {
             Some(val) => val,
-            None => continue, // TODO:
+            None => continue, // Can't create a signature if no name is present (duh)
         };
 
         let text = format!(

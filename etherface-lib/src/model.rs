@@ -1,4 +1,4 @@
-//! Structs that are both used in the GitHub API as well as the Database schema / bindings.
+//! Structs that are both used for database as well as API response purposes.
 
 #![allow(clippy::extra_unused_lifetimes)] // Clippy complains about the Insertable proc-macro
 

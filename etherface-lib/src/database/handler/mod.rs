@@ -42,7 +42,6 @@ pub struct DatabaseClientPooled {
 impl DatabaseClientPooled {
     /// Returns a new threaded database client.
     pub fn new() -> Result<Self, Error> {
-        // TODO: https://docs.diesel.rs/diesel/r2d2/struct.Builder.html
         let config = Config::new()?;
         let manager = diesel::r2d2::ConnectionManager::<PgConnection>::new(&config.database_url);
         let pool = diesel::r2d2::Pool::builder().build(manager).unwrap();
