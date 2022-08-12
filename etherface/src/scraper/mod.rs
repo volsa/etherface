@@ -1,3 +1,5 @@
+//! Consists of sub-modules responsible for downloading and scraping signatures from found Solidity files.
+
 pub mod etherscan;
 pub mod github;
 

@@ -1,3 +1,5 @@
+//! Consists of sub-modules responsible for finding Solidity files from various websites.
+
 pub mod etherscan;
 pub mod fourbyte;
 pub mod github;

@@ -7,8 +7,8 @@
 //! Within the main-loop either [`GithubCrawler::start_one_crawling_iteration`] is executed or an event if
 //! triggered. The main-loop, using `std::sync:mpsc`, operates in a FIFO manner meaning events may need to wait
 //! until one crawling iteration / other currently curring event has successfuly terminated.
-//! //! <div align="center">
-//!  <img src="" width="250" height="250"> // TODO: Populate URL
+//! <div align="center">
+//!  <img src="https://github.com/volsa/etherface/blob/master/res/img/architecture_github_crawler.png?raw=true">
 //! </div>
 
 use chrono::Date;

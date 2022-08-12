@@ -12,7 +12,7 @@
 //!
 //! The architecture for Etherface looks as follows
 //! <div align="center">
-//!  <img src="" width="250" height="250"> // TODO: Populate URL
+//!  <img src="https://github.com/volsa/etherface/blob/master/res/img/architecture_etherface.png?raw=true">
 //! </div>
 //!
 //! The `fetcher` module is thereby responsible for finding [Solidity](https://docs.soliditylang.org/en/latest/)
@@ -20,10 +20,7 @@
 //! is responsible for downloading these files, scraping all function, event and error signatures inserting
 //! them into the database. These scraped signatures are then publicly available at <https://etherface.io/>.
 
-/// Consists of sub-modules responsible for finding Solidity files from various websites.
 mod fetcher;
-
-/// Consists of sub-modules responsible for downloading and scraping signatures from found Solidity files.
 mod scraper;
 
 extern crate log;
