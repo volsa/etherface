@@ -8,9 +8,11 @@ CREATE MATERIALIZED VIEW view_signature_kind_distribution AS
 	SELECT kind, COUNT(*) FROM mapping_signature_kind GROUP BY 1;
 
 CREATE MATERIALIZED VIEW view_signature_count_statistics AS 
-	SELECT 	(SELECT COUNT(*) as signature_count FROM signature) 
+	SELECT 	(SELECT COUNT(*) as signature_count FROM signature WHERE is_valid IS TRUE) 
 				AS signature_count, 
-			(SELECT COUNT(DISTINCT signature_id) AS signature_count_github FROM mapping_signature_github) 
+			-- GitHub might have invalid signatures (in comparison to Etherscan where we only scrape ABI content and 4Byte which we assume is correct anyways)
+			-- so that we have to join with the `signature` table in order to count valid signatures only
+			(SELECT COUNT(DISTINCT signature_id) AS signature_count_github FROM mapping_signature_github JOIN signature ON mapping_signature_github.signature_id = signature.id WHERE is_valid IS TRUE) 
 				AS signature_count_github,
 			(SELECT COUNT(DISTINCT signature_id) AS signature_count_etherscan FROM mapping_signature_etherscan)
 				AS signature_count_etherscan,
