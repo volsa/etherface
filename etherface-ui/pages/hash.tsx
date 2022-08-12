@@ -4,7 +4,7 @@ import Alert from '../components/Alert'
 import Navbar from '../components/Navbar'
 import SearchBar from '../components/SearchBar'
 import Table from '../components/Table'
-import { Response, Signature } from '../lib/types'
+import { Response, Signature, SignatureKind } from '../lib/types'
 import Head from 'next/head'
 
 
@@ -12,6 +12,7 @@ import Head from 'next/head'
 const Hash = () => {
     const [input, setInput] = useState('')
     const [query, setQuery] = useState('')
+    const [queryKind, setQueryKind] = useState<SignatureKind | null>()
     const [errorCode, setErrorCode] = useState<number | null>()
     const [hashCollision, setHashCollision] = useState(false)
     const [signature, setSignature] = useState<Signature | null>()
@@ -86,7 +87,30 @@ const Hash = () => {
 
     const submitHandler = (event) => {
         event.preventDefault()
+
+        if (input.startsWith('f#')) {
+            setQuery(input.slice(2))
+            setQueryKind(SignatureKind.Function)
+            setSignature(null);
+            return;
+        }
+
+        if (input.startsWith('e#')) {
+            setQuery(input.slice(2))
+            setQueryKind(SignatureKind.Event)
+            setSignature(null);
+            return;
+        }
+
+        if (input.startsWith('err#')) {
+            setQuery(input.slice(4))
+            setQueryKind(SignatureKind.Error)
+            setSignature(null);
+            return;
+        }
+
         setQuery(input)
+        setQueryKind(SignatureKind.All)
         setSignature(null);
     }
 
@@ -99,7 +123,7 @@ const Hash = () => {
         setErrorCode(null);
 
         let response = await axios.get(
-            `${process.env.ETHERFACE_REST_ADDRESS}/v1/signatures/hash/${query}/${page}`, {
+            `${process.env.ETHERFACE_REST_ADDRESS}/v1/signatures/hash/${queryKind}/${query}/${page}`, {
             validateStatus: null // https://axios-http.com/docs/req_config
         }
         );
@@ -133,7 +157,7 @@ const Hash = () => {
     const fetcherGithubEndpoint = async (query: string, page: number) => {
         setErrorCode(null);
         let response = await axios.get(
-            `${process.env.ETHERFACE_REST_ADDRESS}/v1/sources/github/${query}/${page}`, {
+            `${process.env.ETHERFACE_REST_ADDRESS}/v1/sources/github/${queryKind}/${query}/${page}`, {
             validateStatus: null // https://axios-http.com/docs/req_config
         }
         );
@@ -156,7 +180,7 @@ const Hash = () => {
     const fetcherEtherscanEndpoint = async (query: string, page: number) => {
         setErrorCode(null);
         let response = await axios.get(
-            `${process.env.ETHERFACE_REST_ADDRESS}/v1/sources/etherscan/${query}/${page}`, {
+            `${process.env.ETHERFACE_REST_ADDRESS}/v1/sources/etherscan/${queryKind}/${query}/${page}`, {
             validateStatus: null // https://axios-http.com/docs/req_config
         }
         );
@@ -193,12 +217,13 @@ const Hash = () => {
                             {!query && <Alert
                                 kind='info'
                                 infoMessage={
-                                    <div className='text-left flex flex-col gap-y-2'>
-                                        <span className='text-xl text-center'>What&apos;s this?</span>
-                                        <span>
-                                            From <a href='https://www.4byte.directory/' className='underline underline-offset-auto'>4Byte</a>: &quot;Function calls in the Ethereum Virtual Machine are specified by the first four bytes of data sent with a transaction. These 4-byte signatures are defined as the first four bytes of the Keccak hash (SHA3) of the canonical representation of the function signature. The database also contains mappings for event signatures. Unlike function signatures, they are defined as 32-bytes of the Keccak hash (SHA3) of the canonical form of the event signature. Since this is a one-way operation, it is not possible to derive the human-readable representation of the function or event from the bytes signature. This database is meant to allow mapping those bytes signatures back to their human-readable versions.&quot;
-                                            Besides providing such bytes signatures, this database slightly differs from 4Byte in that we automatically scrape and store content from GitHub, Etherscan and 4Byte allowing us find signatures with their potential source code.
-                                        </span>
+                                    <div className='flex flex-col text-left'>
+                                        <span>Some tips:</span>
+                                        <span>- Searches are case sensitive yielding signatures starting with your query</span>
+                                        <span>- Filtering by function, event and error signatures is supported by starting your query with</span>
+                                        <span className='ml-4'>- <code>f#</code> to find functions only, e.g. <code>f#70a08231</code></span>
+                                        <span className='ml-4'>- <code>e#</code> to find events only, e.g. <code>e#2d339b1e</code></span>
+                                        <span className='ml-4'>- <code>err#</code> to find errors only, e.g. <code>err#fe7507e6</code></span>
                                     </div>
                                 }
                                 errorMessage={undefined}

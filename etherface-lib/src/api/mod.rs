@@ -1,3 +1,5 @@
+//! GitHub, Etherscan and 4Byte API clients.
+
 use crate::api::github::token::TokenManager;
 use crate::error::Error;
 use log::debug;
@@ -44,6 +46,7 @@ enum ResponseHandlerResult {
     Ok(Content),
     Retry(String),
     RetryWithAction(Action),
+    RetryWithCustomSleepDuration(u64),
 }
 
 ///
@@ -81,6 +84,7 @@ impl RequestHandler {
         token: Option<&str>,
     ) -> Result<Content, Error> {
         let mut retries = 0;
+        let mut retries_valid = 1;
 
         loop {
             let mut request = T::prepare(self, url);
@@ -97,17 +101,29 @@ impl RequestHandler {
                 Ok(response) => match T::process(response)? {
                     ResponseHandlerResult::Ok(body) => return Ok(body),
 
-                    ResponseHandlerResult::Retry(why) => debug!("Retrying because of '{why}'"),
+                    ResponseHandlerResult::Retry(why) => {
+                        debug!("Retrying because of '{why}' ({url})");
+                        if retries_valid < 10 {
+                            retries_valid += 1;
+                        }
+                    }
 
                     ResponseHandlerResult::RetryWithAction(action) => match action {
                         Action::GithubCleanup => {
-                            self.github_tokenmanager.as_ref().unwrap().borrow_mut().cleanup()?
+                            self.github_tokenmanager.as_ref().unwrap().borrow_mut().cleanup()?;
+                            continue;
                         }
 
                         Action::GithubRefresh => {
-                            self.github_tokenmanager.as_ref().unwrap().borrow_mut().refresh()?
+                            self.github_tokenmanager.as_ref().unwrap().borrow_mut().refresh()?;
+                            continue;
                         }
                     },
+
+                    ResponseHandlerResult::RetryWithCustomSleepDuration(duration) => {
+                        std::thread::sleep(std::time::Duration::from_secs(duration));
+                        continue;
+                    }
                 },
 
                 Err(why) => {
@@ -120,7 +136,7 @@ impl RequestHandler {
                 }
             }
 
-            std::thread::sleep(std::time::Duration::from_secs(5));
+            std::thread::sleep(std::time::Duration::from_secs(5 * retries_valid));
         }
     }
 
@@ -187,6 +203,7 @@ impl ResponseHandler for EtherscanResponseHandler {
 
         match response.status().as_u16() {
             200 => {
+                let url = response.url().to_string();
                 let content = response.text().unwrap();
                 let json = serde_json::from_str::<Page>(&content)?;
 
@@ -200,6 +217,15 @@ impl ResponseHandler for EtherscanResponseHandler {
                     // Anything other than a "1" as a JSON status is an error
                     _ => match json.result.as_str() {
                         "Invalid API Key" => todo!("Return error"),
+
+                        "Contract source code not verified" => {
+                            Err(Error::EtherscanContractSourceCodeNotVerified(url))
+                        }
+
+                        "Max rate limit reached" => {
+                            // 5 API calls per seconds, hence sleep 1 seconds before retrying
+                            Ok(ResponseHandlerResult::RetryWithCustomSleepDuration(1))
+                        }
 
                         _ => Ok(ResponseHandlerResult::Retry(json.result)),
                     },

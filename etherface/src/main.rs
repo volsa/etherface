@@ -1,3 +1,34 @@
+//! Function calls in the Ethereum network are specified by the first four byte of data sent with a transaction.
+//! These first four bytes, also called function selector, represent the Keccak256 hash of the functions canonical form (e.g. `balanceOf(address)`).
+//! As an outsider it is impossible to interpret what a given transaction does, because hashes are one-way
+//! calculations. [Events](https://medium.com/mycrypto/understanding-event-logs-on-the-ethereum-blockchain-f4ae7ba50378)
+//! and [errors](https://blog.soliditylang.org/2021/04/21/custom-errors/) are encoded in a similar fashion. As such rainbow tables are
+//! needed to decode and inspect such signatures in the Ethereum network. While such rainbow tables exists,
+//! most prominently [4Byte](https://www.4byte.directory/), two features are missing which Etherface tries to cover.
+//! First, finding such signatures automatically from various websites where such signatures can be found
+//! (currently GitHub, Etherscan and 4Byte) without any human intervention whatsoever. Second, providing source code references
+//! where these signatures were found. For comparision, 4Byte relies on user submitted data / GitHub Webhooks
+//! for the former and does not support the latter at all.
+//!
+//! The architecture for Etherface looks as follows
+//! <div align="center">
+//!  <img src="" width="250" height="250"> // TODO: Populate URL
+//! </div>
+//!
+//! The `fetcher` module is thereby responsible for finding [Solidity](https://docs.soliditylang.org/en/latest/)
+//! files where such signatures are present by either crawling or polling websites whereas the `scraper` module
+//! is responsible for downloading these files, scraping all function, event and error signatures inserting
+//! them into the database. These scraped signatures are then publicly available at <https://etherface.io/>.
+
+/// Consists of sub-modules responsible for finding Solidity files from various websites.
+mod fetcher;
+
+/// Consists of sub-modules responsible for downloading and scraping signatures from found Solidity files.
+mod scraper;
+
+extern crate log;
+extern crate simplelog;
+
 use crate::fetcher::etherscan::EtherscanFetcher;
 use crate::fetcher::fourbyte::FourbyteFetcher;
 use crate::fetcher::Fetcher;
@@ -6,19 +37,11 @@ use crate::scraper::github::GithubScraper;
 use crate::scraper::Scraper;
 use anyhow::Error;
 use fetcher::github::GithubFetcher;
+use log::debug;
 use simplelog::CombinedLogger;
 use simplelog::*;
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
-
-mod fetcher;
-mod scraper;
-extern crate log;
-extern crate simplelog;
-
-enum ThreadStatus {
-    Abort(String),
-}
 
 fn main() -> Result<(), Error> {
     CombinedLogger::init(vec![
@@ -48,15 +71,12 @@ fn main() -> Result<(), Error> {
 
     // This block until we receive a message, which in turn we only receive if there was an error
     match rx.recv() {
-        Ok(msg) => match msg {
-            ThreadStatus::Abort(why) => anyhow::bail!("{why}"),
-        },
-
-        Err(why) => anyhow::bail!("{why}"),
+        Ok(msg) => anyhow::bail!(msg),
+        Err(why) => anyhow::bail!(why),
     }
 }
 
-fn start_data_scraper_threads(tx: &Sender<ThreadStatus>) {
+fn start_data_scraper_threads(tx: &Sender<Error>) {
     let scrapers: Vec<Box<dyn Scraper + Sync + Send>> =
         vec![Box::new(GithubScraper), Box::new(EtherscanScraper)];
 
@@ -64,16 +84,16 @@ fn start_data_scraper_threads(tx: &Sender<ThreadStatus>) {
         let tx_abort_channel = tx.clone();
 
         std::thread::spawn(move || {
-            println!("Starting scraper {:#?}", scraper);
+            debug!("Starting scraper {:#?}", scraper);
 
             if let Err(why) = scraper.start() {
-                tx_abort_channel.send(ThreadStatus::Abort(why.to_string())).unwrap();
+                tx_abort_channel.send(why).unwrap();
             }
         });
     }
 }
 
-fn start_data_retrieval_threads(tx: &Sender<ThreadStatus>) {
+fn start_data_retrieval_threads(tx: &Sender<Error>) {
     let fetchers: Vec<Box<dyn Fetcher + Sync + Send>> = vec![
         Box::new(FourbyteFetcher),
         Box::new(EtherscanFetcher),
@@ -84,10 +104,10 @@ fn start_data_retrieval_threads(tx: &Sender<ThreadStatus>) {
         let tx_abort_channel = tx.clone();
 
         std::thread::spawn(move || {
-            println!("Starting fetcher {:#?}", fetcher);
+            debug!("Starting fetcher {:#?}", fetcher);
 
             if let Err(why) = fetcher.start() {
-                tx_abort_channel.send(ThreadStatus::Abort(why.to_string())).unwrap();
+                tx_abort_channel.send(why).unwrap();
             }
         });
     }

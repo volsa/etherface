@@ -1,3 +1,10 @@
+//! Etherscan API client.
+//! 
+//! Currently only covers the [`getabi`](https://docs.etherscan.io/api-endpoints/contracts#get-contract-abi-for-verified-contract-source-codes)
+//! endpoint because the [`getsourcecode`](https://docs.etherscan.io/api-endpoints/contracts#get-contract-abi-for-verified-contract-source-codes) 
+//! endpoints is a fucking mess which I really don't want to implemente even though it would yield signatures
+//!  with a `private` / `internal` visibility which the scraper can find.
+
 use crate::config::Config;
 use crate::error::Error;
 use crate::model::EtherscanContract;
@@ -22,6 +29,7 @@ struct Page {
 }
 
 impl EtherscanClient {
+    /// Returns a new Etherscan API client.
     pub fn new() -> Result<Self, Error> {
         Ok(EtherscanClient {
             request_handler: RequestHandler::new(),
@@ -29,6 +37,8 @@ impl EtherscanClient {
         })
     }
 
+    /// Returns the JSON response returned by the [`getabi`](https://docs.etherscan.io/api-endpoints/contracts#get-contract-abi-for-verified-contract-source-codes)
+    /// endpoint.
     pub fn get_abi(&self, address: &str) -> Result<String, Error> {
         let url = format!(
             "https://api.etherscan.io/api?module=contract&action=getabi&address={}&apikey={}",
@@ -38,6 +48,8 @@ impl EtherscanClient {
         Ok(self.request_handler.execute_deser::<EtherscanResponseHandler, Page>(&url)?.result)
     }
 
+    /// Returns a list of [`EtherscanContract`] scraped from the <https://etherscan.io/contractsVerified> 
+    /// page. <br/><b>Note</b>: Not part of the official Etherscan API. 
     pub fn get_verified_contracts(&self) -> Result<Vec<EtherscanContract>, Error> {
         let mut contracts = Vec::new();
 

@@ -1,3 +1,5 @@
+//! `github_repository` table handler.
+
 use crate::database::schema::github_repository;
 use crate::database::schema::github_repository::dsl::*;
 use crate::model::GithubRepository;

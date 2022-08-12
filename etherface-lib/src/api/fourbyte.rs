@@ -1,3 +1,8 @@
+//! 4Byte API client.
+//!
+//! Currently only covers the [`/api/v1/signatures`](https://www.4byte.directory/api/v1/signatures/) and
+//! [`/api/v1/event-signatures`](https://www.4byte.directory/api/v1/event-signatures/) endpoints (all we really
+//! need).
 use crate::error::Error;
 use crate::model::SignatureKind;
 use crate::model::SignatureWithMetadata;
@@ -28,6 +33,7 @@ struct FourbyteSignature {
 }
 
 impl FourbyteClient {
+    /// Returns a new 4Byte API client.
     pub fn new() -> Self {
         FourbyteClient {
             request_handler: RequestHandler::new(),
@@ -37,6 +43,8 @@ impl FourbyteClient {
         }
     }
 
+    /// Returns the next function signature page, where the page index auto-increments internally with each
+    /// function call.
     pub fn page_function_signature(&mut self) -> Result<Option<Vec<SignatureWithMetadata>>, Error> {
         if let Some(url) = self.page_next_function.as_ref() {
             let page = self.request_handler.execute_deser::<GenericResponseHandler, Page>(url)?;
@@ -44,8 +52,11 @@ impl FourbyteClient {
 
             let mut signatures = Vec::new();
             for signature in page.results {
-                signatures
-                    .push(SignatureWithMetadata::new(signature.text_signature, SignatureKind::Function));
+                signatures.push(SignatureWithMetadata::new(
+                    signature.text_signature,
+                    SignatureKind::Function,
+                    true,
+                ));
             }
 
             return Ok(Some(signatures));
@@ -54,6 +65,8 @@ impl FourbyteClient {
         Ok(None)
     }
 
+    /// Returns the next event signature page, where the page index auto-increments internally with each
+    /// function call.
     pub fn page_event_signature(&mut self) -> Result<Option<Vec<SignatureWithMetadata>>, Error> {
         if let Some(url) = self.page_next_event.as_ref() {
             let page = self.request_handler.execute_deser::<GenericResponseHandler, Page>(url)?;
@@ -61,7 +74,11 @@ impl FourbyteClient {
 
             let mut signatures = Vec::new();
             for signature in page.results {
-                signatures.push(SignatureWithMetadata::new(signature.text_signature, SignatureKind::Event));
+                signatures.push(SignatureWithMetadata::new(
+                    signature.text_signature,
+                    SignatureKind::Event,
+                    true,
+                ));
             }
 
             return Ok(Some(signatures));

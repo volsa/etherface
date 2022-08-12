@@ -3,20 +3,18 @@ import Alert from '../components/Alert'
 import Navbar from '../components/Navbar'
 import Head from 'next/head'
 
-const Paragraph = ({ title, content }) => {
-    return (
-        <div>
-            <div className='text-3xl font-medium text-black text-left'>{title}</div>
-            <div className='leading-6 text-gray-600 mt-1'>
-                {content}
-            </div>
-        </div>
-    )
+const LinkItem = ({ text, url }) => {
+    return (<a target='_blank' rel="noreferrer" className='underline underline-offset-2 text-gray-400 hover:text-black duration-200' href={url}>{text}</a>)
 }
 
-const SpanMono = ({ content }) => {
+const Paragraph = ({ title, content }) => {
     return (
-        <span className='font-mono'>{content}</span>
+        <div className='w-11/12 2xl:w-1/2 mt-4'>
+            <div className='p-4'>
+                <div className='text-2xl text-black mb-1'>{title}</div>
+                <div className='text text-gray-600'>{content}</div>
+            </div>
+        </div>
     )
 }
 
@@ -25,73 +23,82 @@ const ApiDocumentation = () => {
         <div>
             <Navbar />
             <Head><title>Ethereum Signature Database</title></Head>
-            <div className='grid grid-cols-6'>
-                <div className='col-start-3 col-span-2 mt-4'>
-                    <Alert
-                        kind='info'
-                        infoMessage='The documentation is currently work in progress and will receive an overhaul soon-ish'
-                        errorMessage={undefined}
-                        statusCode={undefined}
-                        query={undefined}
-                    />
 
-                    <div className='flex flex-col gap-y-12 mt-4'>
-                        <Paragraph
-                            title='Introduction'
-                            content={
-                                <>
-                                    <ul className='list-disc list-inside'>
-                                        <li><b>Ratelimit:</b> Currently no ratelimiting is enforced on any endpoint, this might however change in the future if either responses become too slow or the API is being abused.</li>
-                                        <li><b>Status Codes:</b> Endpoints might return 200 (OK), 400 (Bad Request), 404 (Not Found) or 429 (Too Many Requests) HTTP status codes. Furthermore status codes such as 500 might also be returned implicitly, as such make sure to cover both expected and unexcepted status codes.</li>
-                                        <li><b>Pagination:</b> Most endpoints return a paginated response with the following structure <span className='font-mono'>{`{"total_pages": ..., "total_items": ..., "items": [ {...}, {...}, ...] }`}</span></li>
-                                    </ul>
-                                </>
-                            } />
+            <div className='flex flex-col items-center'>
+                <Paragraph
+                    title='Introduction'
+                    content={
+                        <div>
+                            <ul className='list-disc list-inside'>
+                                <li className='list-item'>All listed API endpoints are paginated, returning 100 items per page starting at page 1</li>
+                                <li className='list-item'>Successful responses have the following JSON structure: <code className='text-sm'>{`{"total_pages": ..., "total_items": ..., "items": [ {...}, ...] }`}</code></li>
+                                <li className='list-item'>Unsuccessful responses either return the <code>400</code> or <code>404</code> HTTP status code</li>
+                                <li className='list-item'>Additionally the <code>429</code> status code might be added to the list depending on whether or not ratelimiting is neccessary (hopefully not, fingers crossed)</li>
+                                <li className='list-item'>Lastly, if you enjoy this project make sure to also star it on <LinkItem text='GitHub' url='https://github.com/volsa/etherface' /> {`<3`}</li>
+                            </ul>
+                        </div>
+                    }
+                />
 
-                        <Paragraph
-                            title={<span className='font-mono'>{`/v1/signatures/hash/{signature}/{page}`}</span>}
-                            content={
-                                <div className='whitespace-pre-line'>
-                                    <p>Returns a paginated list of signatures where</p>
-                                    <ul className='list-disc list-inside'>
-                                        <li><b>signature:</b> is the function selector (hash), either 8 or 64 characters long</li>
-                                        <li><b>page:</b> is the page index (starting at 1)</li>
-                                    </ul>
-                                    <p>Example: <a href='https://api.etherface.io/v1/signatures/hash/70a08231/1' className='underline underline-offset-2 hover:text-black duration-200'>https://api.etherface.io/v1/signatures/hash/70a08231/1</a> returns all signatures starting with <span className='font-mono'>70a08231</span> where the page index is 1.</p>
-                                    <p className='mt-2'><b>Note:</b> Currently does not support filterting by kind. If you feel like this should be supported feel free to open a <a className='underline underline-offset-2 hover:text-black duration-200' href='https://github.com/volsa/etherface/issues/new'>GitHub issue</a>.</p>
-                                </div>
-                            } />
+                <Paragraph
+                    title={<code>{`/v1/signatures/text/{kind}/{query}/{page}`}</code>}
+                    content={
+                        <div>
+                            <p>Returns a paginated list of signatures where</p>
+                            <ul className='list-disc list-inside'>
+                                <li className='list-item'><code>kind</code> is either <code>function</code>, <code>event</code>, <code>error</code> or <code>all</code></li>
+                                <li className='list-item'><code>query</code> is the signatures starting text representation (at least 3 characters long)</li>
+                                <li className='list-item'><code>page</code> is the page index, starting at 1</li>
+                            </ul>
+                            <p><b>Example:</b> <LinkItem text='api.etherface.io/v1/signatures/text/all/balanceOf/1' url='https://api.etherface.io/v1/signatures/text/all/balanceOf/1' /> returns all signatures starting with <code>balanceOf</code> (case sensitive!)</p>
+                        </div>
+                    }
+                />
 
-                        <Paragraph
-                            title={<span className='font-mono'>{`/v1/signatures/text/{kind}/{signature}/{page}`}</span>}
-                            content={
-                                <div className='whitespace-pre-line'>
-                                    <p>Returns a paginated list of signatures where</p>
-                                    <ul className='list-disc list-inside'>
-                                        <li><b>kind:</b> is the signature kind which must be <SpanMono content={'all'} />, <SpanMono content='function' />, <SpanMono content='event' /> or <SpanMono content='error' /></li>
-                                        <li><b>signature:</b> is the starting text representation of the signature (must be at least 3 characters long)</li>
-                                        <li><b>page:</b> is the page index (starting at 1)</li>
-                                    </ul>
-                                    <p>Example: <a href='https://api.etherface.io/v1/signatures/text/function/balanceOf/1' className='underline underline-offset-2 hover:text-black duration-200'>https://api.etherface.io/v1/signatures/text/function/balanceOf/1</a> returns all function signatures starting with <span className='font-mono'>balanceOf</span> where the page index is 1.</p>
-                                    <p className='mt-2'><b>Note:</b> Currently only returns signatures found from GitHub, i.e. Etherscan and 4Byte signatures are excluded. If you feel like this should be supported feel free to open a <a className='underline underline-offset-2 hover:text-black duration-200' href='https://github.com/volsa/etherface/issues/new'>GitHub issue</a>.</p>
-                                </div>
-                            } />
+                <Paragraph
+                    title={<code>{`/v1/signatures/hash/{kind}/{query}/{page}`}</code>}
+                    content={
+                        <div>
+                            <p>Returns a paginated list of signatures where</p>
+                            <ul className='list-disc list-inside'>
+                                <li className='list-item'><code>kind</code> is either <code>function</code>, <code>event</code>, <code>error</code> or <code>all</code></li>
+                                <li className='list-item'><code>query</code> is the signature hash (either 8 or 64 characters long)</li>
+                                <li className='list-item'><code>page</code> is the page index, starting at 1</li>
+                            </ul>
+                            <p><b>Example:</b> <LinkItem text='api.etherface.io/v1/signatures/hash/all/70a08231/1' url='https://api.etherface.io/v1/signatures/hash/all/70a08231/1' /> returns all signatures starting with the hash <code>70a08231</code> (case sensitive!)</p>
+                        </div>
+                    }
+                />
 
-                        <Paragraph
-                            title={<span className='font-mono'>{`/v1/sources/{source}/{id}/{page}`}</span>}
-                            content={
-                                <div className='whitespace-pre-line'>
-                                    <p>Returns a paginated list of potential source code belonging to a signature where</p>
-                                    <ul className='list-disc list-inside'>
-                                        <li><b>source:</b> is the platform where the signature was found at which must be either <SpanMono content='github' /> or <SpanMono content='etherscan' /></li>
-                                        <li><b>id:</b> is the signatures ID which can be obtained using the <SpanMono content='/v1/signatures/{hash,text}' /> endpoint</li>
-                                        <li><b>page:</b> is the page index (starting at 1)</li>
-                                    </ul>
-                                    <p>Example: <a href='https://api.etherface.io/v1/sources/github/39/1' className='underline underline-offset-2 hover:text-black duration-200'>https://api.etherface.io/v1/sources/github/39/1</a> returns all GitHub repositories where the signature <SpanMono content='balanceOf(address)' /> was scraped from with the page index is 1.</p>
-                                </div>
-                            } />
-                    </div>
-                </div>
+                <Paragraph
+                    title={<code>{`/v1/sources/github/{kind}/{id}/{page}`}</code>}
+                    content={
+                        <div>
+                            <p>Returns a paginated list of GitHub repositories ordered by their stargazers where </p>
+                            <ul className='list-disc list-inside'>
+                                <li className='list-item'><code>kind</code> is either <code>function</code>, <code>event</code>, <code>error</code> or <code>all</code></li>
+                                <li className='list-item'><code>id</code> is the signatures internal ID, obtained by the <code>{`/v1/signatures/{text,hash}`}</code> endpoints</li>
+                                <li className='list-item'><code>page</code> is the page index, starting at 1</li>
+                            </ul>
+                            <p><b>Example:</b> <LinkItem text='api.etherface.io/v1/sources/github/all/7/1' url='https://api.etherface.io/v1/sources/github/all/7/1' /> returns all GitHub repositories which contain the <code>balanceOf(address)</code> signature / <code>70a08231</code> hash</p>
+                        </div>
+                    }
+                />
+
+                <Paragraph
+                    title={<code>{`/v1/sources/etherscan/{kind}/{id}/{page}`}</code>}
+                    content={
+                        <div>
+                            <p>Returns a paginated list of Etherscan addresses ordered by their added date where </p>
+                            <ul className='list-disc list-inside'>
+                                <li className='list-item'><code>kind</code> is either <code>function</code>, <code>event</code>, <code>error</code> or <code>all</code></li>
+                                <li className='list-item'><code>id</code> is the signatures internal ID, obtained by the <code>{`/v1/signatures/{text,hash}`}</code> endpoints</li>
+                                <li className='list-item'><code>page</code> is the page index, starting at 1</li>
+                            </ul>
+                            <p><b>Example:</b> <LinkItem text='api.etherface.io/v1/sources/etherscan/all/7/1' url='https://api.etherface.io/v1/sources/etherscan/all/7/1' /> returns all Etherscan addresses which contain the <code>balanceOf(address)</code> signature / <code>70a08231</code> hash</p>
+                        </div>
+                    }
+                />
             </div>
         </div>
     )

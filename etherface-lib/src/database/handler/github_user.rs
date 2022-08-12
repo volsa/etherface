@@ -1,3 +1,5 @@
+//! `github_user` table handler.
+
 use crate::database::schema::github_user;
 use crate::database::schema::github_user::dsl::*;
 use crate::model::GithubUser;

@@ -31,7 +31,7 @@ const Statistics = () => {
     const Card = ({ title, stat }) => {
         return (
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden border transform transition-all mb-4 w-full">
-                <div className="bg-white p-5">
+                <div className="bg-white p-1 pt-5 pb-5">
                     <div className="text-center">
                         <h3 className="text-sm leading-6 font-medium text-gray-400">{title}</h3>
                         <p className="text-3xl font-bold text-black">{stat.toLocaleString().replaceAll(',', '.')}</p>
@@ -58,17 +58,17 @@ const Statistics = () => {
                         />
 
                         <div className='mt-4 gap-x-8 gap-y-2 grid grid-cols-2 2xl:grid-cols-4'>
-                            <Card title={<span># Signatures</span>} stat={items.statistics_various_signature_counts.signature_count} />
-                            <Card title={<span># Signatures from <a rel='noreferrer' target='_blank' href='https://www.github.com/' className='underline underline-offset-2'>GitHub</a></span>} stat={items.statistics_various_signature_counts.signature_count_github} />
-                            <Card title={<span># Signatures from <a rel='noreferrer' target='_blank' href='https://www.4byte.directory/' className='underline underline-offset-2'>4Byte</a></span>} stat={items.statistics_various_signature_counts.signature_count_fourbyte} />
-                            <Card title={<span># Signatures from <a rel='noreferrer' target='_blank' href='https://www.etherscan.io/' className='underline underline-offset-2'>Etherscan</a></span>} stat={items.statistics_various_signature_counts.signature_count_etherscan} />
+                            <Card title={<span># Unique Signatures</span>} stat={items.statistics_various_signature_counts.signature_count} />
+                            <Card title={<span># Signatures <a rel='noreferrer' target='_blank' href='https://www.github.com/' className='underline underline-offset-2'>(GitHub)</a></span>} stat={items.statistics_various_signature_counts.signature_count_github} />
+                            <Card title={<span># Signatures <a rel='noreferrer' target='_blank' href='https://www.4byte.directory/' className='underline underline-offset-2'>(4Byte)</a></span>} stat={items.statistics_various_signature_counts.signature_count_fourbyte} />
+                            <Card title={<span># Signatures <a rel='noreferrer' target='_blank' href='https://www.etherscan.io/' className='underline underline-offset-2'>(Etherscan)</a></span>} stat={items.statistics_various_signature_counts.signature_count_etherscan} />
 
                             {items.statistics_signature_kind_distribution.map((item) => {
                                 return (
                                     <Card key={item.kind} title={`# ${item.kind.charAt(0).toUpperCase() + item.kind.slice(1)} Signatures`} stat={item.count} />
                                 )
                             })}
-                            <Card title={<span>Last weeks avg. inserts / day</span>} stat={items.statistics_various_signature_counts.average_daily_signature_insert_rate_last_week.toLocaleString().replaceAll(',', '.')} />
+                            <Card title={<span>Average inserts / day</span>} stat={items.statistics_various_signature_counts.average_daily_signature_insert_rate_last_week.toLocaleString().replaceAll(',', '.')} />
 
                         </div>
 

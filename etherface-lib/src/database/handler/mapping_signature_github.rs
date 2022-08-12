@@ -1,3 +1,5 @@
+//! `mapping_signature_github` table handler.
+
 use crate::database::schema::mapping_signature_github;
 use crate::model::MappingSignatureGithub;
 // use crate::database::schema::mapping_signature_github::dsl::*;

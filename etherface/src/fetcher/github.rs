@@ -1,3 +1,16 @@
+//! Fetcher for <https://github.com/>
+//!
+//! Fetcher finding repositories with Solidity code by a combination of using the GitHub Search API as well as
+//! focused crawling. This is done with event-threads, where 3 events exist namely [`Event::SearchRepositories`],
+//! [`Event::CheckRepositories`] and [`Event::CheckUsers`]. These events are triggered periodically using
+//! [`start_background_event`] sending a message with `std::sync:mpsc` to the fetchers main-loop.
+//! Within the main-loop either [`GithubCrawler::start_one_crawling_iteration`] is executed or an event if
+//! triggered. The main-loop, using `std::sync:mpsc`, operates in a FIFO manner meaning events may need to wait
+//! until one crawling iteration / other currently curring event has successfuly terminated.
+//! //! <div align="center">
+//!  <img src="" width="250" height="250"> // TODO: Populate URL
+//! </div>
+
 use chrono::Date;
 use chrono::DateTime;
 use chrono::TimeZone;
@@ -7,7 +20,6 @@ use etherface_lib::database::handler::DatabaseClient;
 use etherface_lib::error::Error;
 use etherface_lib::model::GithubRepository;
 use etherface_lib::model::GithubUser;
-use etherface_lib::model::MappingStargazer;
 use log::debug;
 use log::info;
 use std::sync::mpsc;
@@ -87,7 +99,7 @@ impl GithubCrawler {
                 Ok(msg) => match msg.event {
                     Event::SearchRepositories => {
                         debug!("Starting SearchRepositories event");
-                        let prev_event_date = self.dbc.crawler_metadata().get().last_repository_search.date();
+                        let prev_event_date = self.dbc.github_crawler_metadata().get().last_repository_search.date();
 
                         debug!("Prev event date: {prev_event_date}");
                         self.insert_recently_created_solidity_repositories(prev_event_date)?;
@@ -95,8 +107,8 @@ impl GithubCrawler {
 
                         // Only set if previous function calls were successful
                         debug!("Prev event date: {}", msg.new_event_date);
-                        self.dbc.crawler_metadata().update_last_repository_search_date(msg.new_event_date);
-                        debug!("{}", self.dbc.crawler_metadata().get().last_repository_search.date());
+                        self.dbc.github_crawler_metadata().update_last_repository_search_date(msg.new_event_date);
+                        debug!("{}", self.dbc.github_crawler_metadata().get().last_repository_search.date());
                     }
 
                     Event::CheckRepositories => {
@@ -104,7 +116,7 @@ impl GithubCrawler {
                         self.find_repository_updates(180)?;
 
                         // Only set if previous function calls were successful
-                        self.dbc.crawler_metadata().update_last_repository_check_date(msg.new_event_date);
+                        self.dbc.github_crawler_metadata().update_last_repository_check_date(msg.new_event_date);
                     }
 
                     Event::CheckUsers => {
@@ -112,7 +124,7 @@ impl GithubCrawler {
                         self.find_user_updates(180)?;
 
                         // Only set if previous commands were successful
-                        self.dbc.crawler_metadata().update_last_user_check_date(msg.new_event_date);
+                        self.dbc.github_crawler_metadata().update_last_user_check_date(msg.new_event_date);
                     }
                 },
 
@@ -124,6 +136,13 @@ impl GithubCrawler {
         }
     }
 
+    /// Starts one crawling iteration which can be summarised as:
+    /// Check if there are any unvisited Solidity repository owners (GitHub users)
+    ///     Yes => Take the first [`NUM_RESOURCE_VISITS_PER_CRAWLING_ITERATION`] owners from the database and
+    ///            retrieve their owned + starred repositories; set them as visited
+    ///     No  => Take the first [`NUM_RESOURCE_VISITS_PER_CRAWLING_ITERATION`] unvisited repositories from
+    ///            the database and for each one of them fetch their stargazers; for each fetched stargazer
+    ///            retrieve their owner + starred repositories; set them and the repository as visited
     fn start_one_crawling_iteration(&self) -> Result<(), Error> {
         let unvisited_solidity_repository_owners =
             self.dbc.github_user().get_unvisited_solidity_repository_owners_orderd_by_added_at();
@@ -152,13 +171,13 @@ impl GithubCrawler {
 
                 if unvisited_repos.is_empty() {
                     panic!(
-                        "The crawler is not able to find further repositories if you read this message;
-                        The reason for this is because all repositories yielding function signatures have been
+                        "If you read this message, the crawler is not able to find further repositories;
+                        The reason for this is because all Solidity repositories in our database have been
                         visited. There are a couple of ways to bypass this issue:
                         - Issue an event hoping to find new repositories
                         - Sleep until the next event
                         - Widen the crawlers bubble to not only focus on Solidity repositories / owners, but
-                          we don't want this
+                          we don't want this as we would get a lot of garbage input
                         - ...
                         We could also use the time to check if our local data needs to be updated to mirror
                         GitHub's state."
@@ -175,12 +194,6 @@ impl GithubCrawler {
 
                         self.get_and_insert_user_owned_repos(stargazer.id, true)?;
                         self.get_and_insert_user_starred_repos(stargazer.id, true)?;
-
-                        self.dbc.mapping_stargazer().insert(&MappingStargazer {
-                            user_id: stargazer.id,
-                            repository_id: repo.id,
-                        });
-
                         self.dbc.github_user().set_visited(stargazer.id);
                     }
 
@@ -209,10 +222,6 @@ impl GithubCrawler {
         if let Ok(repos) = self.ghc.user(user_id).starred() {
             for repo in repos {
                 self.insert_repository_if_not_exists(&repo, crawled)?;
-                self.dbc.mapping_stargazer().insert(&MappingStargazer {
-                    user_id,
-                    repository_id: repo.id,
-                });
             }
         }
 
@@ -424,9 +433,9 @@ fn start_background_event(
 ) -> Result<(), Error> {
     let dbc = DatabaseClient::new()?;
     let last_event_date = match event {
-        Event::SearchRepositories => dbc.crawler_metadata().get().last_repository_search,
-        Event::CheckRepositories => dbc.crawler_metadata().get().last_repository_check,
-        Event::CheckUsers => dbc.crawler_metadata().get().last_user_check,
+        Event::SearchRepositories => dbc.github_crawler_metadata().get().last_repository_search,
+        Event::CheckRepositories => dbc.github_crawler_metadata().get().last_repository_check,
+        Event::CheckUsers => dbc.github_crawler_metadata().get().last_user_check,
     };
 
     std::thread::spawn(move || {

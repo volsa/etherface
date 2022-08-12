@@ -1,3 +1,5 @@
+//! `/repositories` endpoint handler.
+
 use crate::api::github::page::Page;
 use crate::api::github::GithubClient;
 use crate::error::Error;
@@ -13,34 +15,40 @@ pub struct RepoHandler<'a> {
 }
 
 impl<'a> RepoHandler<'a> {
-    pub fn new(ghc: &'a GithubClient, id: i32) -> Self {
+    pub(crate) fn new(ghc: &'a GithubClient, id: i32) -> Self {
         RepoHandler { ghc, id }
     }
 
+    /// Returns the deserialized JSON `/repositories/{id}` response.
     pub fn get(&self) -> Result<GithubRepository, Error> {
         let path = format!("repositories/{id}", id = self.id);
 
         Ok(self.ghc.execute(&path)?.json().unwrap())
     }
 
+    /// Returns the deserialized JSON `/repositories/{id}/stargazers` response.
     pub fn stargazers(&self) -> Result<Vec<GithubUser>, Error> {
         let path = format!("repositories/{id}/stargazers", id = self.id);
 
         Page::all_pages(self.ghc, path)
     }
 
+    /// Returns the deserialized JSON `/repositories/{id}/languages` response.
     pub fn languages(&self) -> Result<HashMap<String, usize>, Error> {
         let path = format!("repositories/{id}/languages", id = self.id);
 
         Ok(self.ghc.execute(&path)?.json().unwrap())
     }
 
+    /// Returns the deserialized JSON `/repositories/{id}/forks` response.
     pub fn forks(&self) -> Result<Vec<GithubRepository>, Error> {
         let path = format!("repositories/{id}/forks", id = self.id);
 
         Page::all_pages(self.ghc, path)
     }
 
+    /// Returns the absolute Solidity ratio of a repositories,
+    /// i.e. Solidity Ratio / Summed Ratio of All Languages.
     pub fn solidity_ratio(&self) -> Result<f32, Error> {
         let languages = self.languages()?;
         let solidity = languages.get("Solidity");
@@ -53,7 +61,8 @@ impl<'a> RepoHandler<'a> {
         Ok(*solidity.unwrap() as f32 / total as f32)
     }
 
-    // https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests
+    /// Returns a [`GithubRepository`] if and only if the repository has been modified since the given date.
+    /// <br/>See <https://docs.github.com/en/rest/overview/resources-in-the-rest-api#conditional-requests>.
     pub fn modified_since(&self, date: DateTime<Utc>) -> Result<Option<GithubRepository>, Error> {
         let path = format!("repositories/{id}", id = self.id);
         let date = date.format("%a, %d %b %Y %H:%M:%S GMT").to_string();

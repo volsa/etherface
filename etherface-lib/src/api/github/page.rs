@@ -1,5 +1,5 @@
-//! Read https://docs.github.com/en/rest/overview/resources-in-the-rest-api#pagination for a better
-//! understanding of this module.
+//! Handles all GitHub API pagination logic. For a better understanding of this module make sure to read
+//! <https://docs.github.com/en/rest/overview/resources-in-the-rest-api#pagination>,
 
 use crate::api::github::GithubClient;
 use crate::error::Error;

@@ -1,3 +1,10 @@
+//! Scraper for <https://etherscan.io/>
+//! 
+//! Fetches all unscraped Etherscan contract addresses from the database, downloads their ABI content using
+//! the <https://api.etherscan.io/api?module=contract&action=getabi> endpoint extracting signatures. These
+//! extracted signatures are then inserted into the database with a reference to the contract address, marking
+//! the contract as scraped. The whole process is then repeated every [`SCRAPER_SLEEP_DURATION`] seconds.
+
 use crate::scraper::Scraper;
 use anyhow::Error;
 use chrono::Utc;
@@ -5,6 +12,8 @@ use etherface_lib::api::etherscan::EtherscanClient;
 use etherface_lib::database::handler::DatabaseClient;
 use etherface_lib::model::MappingSignatureEtherscan;
 use etherface_lib::parser;
+
+use super::SCRAPER_SLEEP_DURATION;
 
 #[derive(Debug)]
 pub struct EtherscanScraper;
@@ -35,7 +44,7 @@ impl Scraper for EtherscanScraper {
                 }
             }
 
-            std::thread::sleep(std::time::Duration::from_secs(5 * 60));
+            std::thread::sleep(std::time::Duration::from_secs(SCRAPER_SLEEP_DURATION));
         }
     }
 }

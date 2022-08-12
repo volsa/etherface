@@ -39,7 +39,6 @@ table! {
         stargazers_count -> Int4,
         size -> Int4,
         fork -> Bool,
-        fork_parent_id -> Nullable<Int4>,
         created_at -> Timestamptz,
         pushed_at -> Timestamptz,
         updated_at -> Timestamptz,
@@ -105,9 +104,9 @@ table! {
     use diesel::sql_types::*;
     use crate::model::*;
 
-    mapping_stargazer (user_id, repository_id) {
-        user_id -> Int4,
-        repository_id -> Int4,
+    mapping_signature_kind (signature_id, kind) {
+        signature_id -> Int4,
+        kind -> Signature_kind,
     }
 }
 
@@ -119,6 +118,7 @@ table! {
         id -> Int4,
         text -> Text,
         hash -> Text,
+        is_valid -> Bool,
         added_at -> Timestamptz,
     }
 }
@@ -129,8 +129,7 @@ joinable!(mapping_signature_etherscan -> signature (signature_id));
 joinable!(mapping_signature_fourbyte -> signature (signature_id));
 joinable!(mapping_signature_github -> github_repository (repository_id));
 joinable!(mapping_signature_github -> signature (signature_id));
-joinable!(mapping_stargazer -> github_repository (repository_id));
-joinable!(mapping_stargazer -> github_user (user_id));
+joinable!(mapping_signature_kind -> signature (signature_id));
 
 allow_tables_to_appear_in_same_query!(
     etherscan_contract,
@@ -140,6 +139,6 @@ allow_tables_to_appear_in_same_query!(
     mapping_signature_etherscan,
     mapping_signature_fourbyte,
     mapping_signature_github,
-    mapping_stargazer,
+    mapping_signature_kind,
     signature,
 );

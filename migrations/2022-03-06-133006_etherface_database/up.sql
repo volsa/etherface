@@ -1,4 +1,4 @@
-CREATE TYPE signature_kind          AS ENUM ('function', 'event', 'error');
+CREATE TYPE signature_kind AS ENUM ('function', 'event', 'error');
 
 CREATE TABLE github_crawler_metadata (
     id                              INT                         NOT NULL,
@@ -32,7 +32,6 @@ CREATE TABLE github_repository (
     stargazers_count    INT                         NOT NULL,
     size                INT                         NOT NULL,
     fork                BOOLEAN                     NOT NULL,
-    fork_parent_id      INT,
     created_at          TIMESTAMP WITH TIME ZONE    NOT NULL,
     pushed_at           TIMESTAMP WITH TIME ZONE    NOT NULL,
     updated_at          TIMESTAMP WITH TIME ZONE    NOT NULL,
@@ -42,14 +41,12 @@ CREATE TABLE github_repository (
     scraped_at          TIMESTAMP WITH TIME ZONE,               -- date we last scraped signatures from the repository
     visited_at          TIMESTAMP WITH TIME ZONE,               -- date we last visited the repository
     added_at            TIMESTAMP WITH TIME ZONE    NOT NULL,   -- date we added the repository into the database
-
     solidity_ratio      REAL,
     is_deleted          BOOLEAN                     NOT NULL, -- flag indicating if repository is deleted 
     found_by_crawling   BOOLEAN                     NOT NULL, -- flag indicating if repository was found using the API search endpoint or by crawling
 
     PRIMARY KEY (id),
-    FOREIGN KEY (owner_id)          REFERENCES github_user (id),
-    FOREIGN KEY (fork_parent_id)    REFERENCES github_repository (id)
+    FOREIGN KEY (owner_id)          REFERENCES github_user (id)
 );
 
 CREATE TABLE etherscan_contract (
@@ -72,10 +69,18 @@ CREATE TABLE signature (
     id          SERIAL                      NOT NULL,
     text        TEXT                        NOT NULL,
     hash        TEXT                        NOT NULL,
+    is_valid    BOOLEAN                     NOT NULL,
     added_at    TIMESTAMP WITH TIME ZONE    NOT NULL,
 
     UNIQUE (hash),
     PRIMARY KEY (id)
+);
+
+CREATE TABLE mapping_signature_kind (
+    signature_id    INT             NOT NULL REFERENCES signature (id),
+    kind            SIGNATURE_KIND  NOT NULL,
+
+    PRIMARY KEY (signature_id, kind)
 );
 
 CREATE TABLE mapping_signature_github (
@@ -102,11 +107,4 @@ CREATE TABLE mapping_signature_fourbyte (
     added_at        TIMESTAMP WITH TIME ZONE    NOT NULL,
 
     PRIMARY KEY (signature_id, kind)
-);
-
-CREATE TABLE mapping_stargazer (
-    user_id         INT NOT NULL REFERENCES github_user         (id),
-    repository_id   INT NOT NULL REFERENCES github_repository   (id),
-
-    PRIMARY KEY (user_id, repository_id)
 );

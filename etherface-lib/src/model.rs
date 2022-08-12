@@ -1,15 +1,8 @@
-//! Structs that are both used in the GitHub API as well as the Database schema / bindings.
+//! Structs that are both used for database as well as API response purposes.
+
 #![allow(clippy::extra_unused_lifetimes)] // Clippy complains about the Insertable proc-macro
 
-use crate::database::schema::etherscan_contract;
-use crate::database::schema::github_crawler_metadata;
-use crate::database::schema::github_repository;
-use crate::database::schema::github_user;
-use crate::database::schema::mapping_signature_etherscan;
-use crate::database::schema::mapping_signature_fourbyte;
-use crate::database::schema::mapping_signature_github;
-use crate::database::schema::mapping_stargazer;
-use crate::database::schema::signature;
+use crate::database::schema::*;
 use chrono::DateTime;
 use chrono::Utc;
 use diesel::Insertable;
@@ -94,7 +87,6 @@ pub struct GithubRepositoryDatabase {
     pub stargazers_count: i32,
     pub size: i32,
     pub fork: bool,
-    pub fork_parent_id: Option<i32>,
     pub created_at: DateTime<Utc>,
     pub pushed_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -121,7 +113,6 @@ impl GithubRepository {
             stargazers_count: self.stargazers_count,
             size: self.size,
             fork: self.fork,
-            fork_parent_id: self.fork_parent.as_ref().map(|parent| parent.id),
             created_at: self.created_at,
             pushed_at: self.pushed_at,
             updated_at: self.updated_at,
@@ -138,7 +129,7 @@ impl GithubRepository {
     }
 }
 
-#[derive(Serialize, Queryable)]
+#[derive(Debug, Serialize, Queryable)]
 pub struct EtherscanContract {
     pub id: i32,
     pub address: String,
@@ -150,7 +141,7 @@ pub struct EtherscanContract {
     pub added_at: DateTime<Utc>,
 }
 
-#[derive(Insertable)]
+#[derive(Debug, Insertable)]
 #[table_name = "etherscan_contract"]
 pub struct EtherscanContractInsert<'a> {
     pub address: &'a str,
@@ -179,6 +170,7 @@ pub struct Signature {
     pub id: i32,
     pub text: String,
     pub hash: String,
+    pub is_valid: bool,
     pub added_at: DateTime<Utc>,
 }
 
@@ -187,14 +179,23 @@ pub struct Signature {
 pub struct SignatureInsert<'a> {
     pub text: &'a str,
     pub hash: &'a str,
+    pub is_valid: bool,
     pub added_at: DateTime<Utc>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Hash)]
 pub struct SignatureWithMetadata {
+    /// The signatures text representation / canonical form, e.g. `balanceOf(address)`.
     pub text: String,
+
+    /// The [`SignatureWithMetadata::text`]s hash.
     pub hash: String,
+
+    /// The signatures kind.
     pub kind: SignatureKind,
+
+    /// Whether or not the signature has an user defined parameter type (see <https://blog.soliditylang.org/2021/09/27/user-defined-value-types/>).
+    pub is_valid: bool,
 }
 
 #[derive(Queryable, Insertable)]
@@ -223,24 +224,30 @@ pub struct MappingSignatureFourbyte {
     pub added_at: DateTime<Utc>,
 }
 
-#[derive(Queryable, Insertable, Debug)]
-#[table_name = "mapping_stargazer"]
-pub struct MappingStargazer {
-    pub user_id: i32,
-    pub repository_id: i32,
+#[derive(Queryable, Insertable)]
+#[table_name = "mapping_signature_kind"]
+pub struct MappingSignatureKind {
+    pub signature_id: i32,
+    pub kind: SignatureKind,
 }
 
 impl SignatureWithMetadata {
-    pub fn new(text: String, kind: SignatureKind) -> Self {
+    pub fn new(text: String, kind: SignatureKind, is_valid: bool) -> Self {
         let hash = format!("{:x}", Keccak256::digest(&text));
 
-        Self { text, hash, kind }
+        Self {
+            text,
+            hash,
+            kind,
+            is_valid,
+        }
     }
 
     pub fn to_insertable(&self) -> SignatureInsert {
         SignatureInsert {
             text: &self.text,
             hash: &self.hash,
+            is_valid: self.is_valid,
             added_at: Utc::now(),
         }
     }
@@ -283,6 +290,7 @@ pub mod views {
     use diesel::sql_types::BigInt;
     use diesel::sql_types::Date;
     use diesel::sql_types::Text;
+    use diesel::sql_types::Nullable;
     use diesel::Queryable;
     use diesel::QueryableByName;
     use serde::Serialize;
@@ -322,8 +330,8 @@ pub mod views {
         #[sql_type = "BigInt"]
         average_daily_signature_insert_rate_last_week: i64,
 
-        #[sql_type = "BigInt"]
-        average_daily_signature_insert_rate_week_before_last: i64,
+        #[sql_type = "Nullable<BigInt>"]
+        average_daily_signature_insert_rate_week_before_last: Option<i64>, // This can be NULL in the first week
     }
 
     #[derive(Queryable, QueryableByName, Serialize)]

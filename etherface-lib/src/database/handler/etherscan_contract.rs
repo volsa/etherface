@@ -1,3 +1,5 @@
+//! `etherscan_contract` table handler.
+
 use crate::database::schema::etherscan_contract;
 use crate::database::schema::etherscan_contract::dsl::*;
 use crate::model::EtherscanContract;

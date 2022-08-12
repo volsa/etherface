@@ -1,3 +1,5 @@
+//! `github_crawler_metadata` table handler.
+
 // use crate::database::schema::github_crawler_metadata;
 use crate::database::schema::github_crawler_metadata::dsl::*;
 use crate::model::GithubCrawlerMetadata;

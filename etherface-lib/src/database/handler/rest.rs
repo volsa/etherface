@@ -1,3 +1,5 @@
+//! `/v1/` REST API handler.
+
 use crate::database::pagination::Paginate;
 use crate::model::views::ViewSignatureCountStatistics;
 use crate::model::views::ViewSignatureInsertRate;
@@ -7,7 +9,6 @@ use crate::model::EtherscanContract;
 use crate::model::GithubRepositoryDatabase;
 use crate::model::Signature;
 use crate::model::SignatureKind;
-use diesel::dsl::count_star;
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
@@ -33,40 +34,40 @@ impl<'a> RestHandler<'a> {
         RestHandler { connection }
     }
 
-    pub fn signatures_where_text_starts_with_ordered_by_relevance(
+    pub fn signatures_where_text_starts_with(
         &self,
         entity_str: &str,
         entity_kind: Option<SignatureKind>,
         page: i64,
     ) -> Response<Signature> {
-        use crate::database::schema::mapping_signature_github;
-        // use crate::database::schema::mapping_signature_github::dsl::*;
+        use crate::database::schema::mapping_signature_kind;
         use crate::database::schema::signature;
         use crate::database::schema::signature::dsl::*;
+        // use crate::database::schema::mapping_signature_kind::dsl::*;
 
         let (items, total_items, total_pages) = match entity_kind {
-            Some(kind) => {
+            Some(entity_kind) => {
                 let query = signature
-                    .inner_join(mapping_signature_github::table)
+                    .inner_join(mapping_signature_kind::table)
                     .filter(
                         signature::text
                             .like(format!("{entity_str}%"))
-                            .and(mapping_signature_github::kind.eq(kind)),
+                            .and(signature::is_valid.eq(true))
+                            .and(mapping_signature_kind::kind.eq(entity_kind)),
                     )
-                    .group_by(signature::id)
-                    .order_by(count_star().desc())
+                    .order_by(signature::id.asc())
                     .select(signature::all_columns)
                     .paginate(page);
+
+                println!("{}", diesel::debug_query::<_, _>(&query).to_string());
 
                 query.load_and_count_pages::<Signature>(&mut self.connection.get().unwrap()).unwrap()
             }
 
             None => {
                 let query = signature
-                    .inner_join(mapping_signature_github::table)
-                    .filter(signature::text.like(format!("{entity_str}%")))
-                    .group_by(signature::id)
-                    .order_by(count_star().desc())
+                    .filter(signature::text.like(format!("{entity_str}%")).and(signature::is_valid.eq(true)))
+                    .order_by(signature::id.asc())
                     .select(signature::all_columns)
                     .paginate(page);
 
@@ -84,17 +85,44 @@ impl<'a> RestHandler<'a> {
         }
     }
 
-    pub fn signature_where_hash_starts_with(&self, entity_str: &str, page: i64) -> Response<Signature> {
+    pub fn signature_where_hash_starts_with(
+        &self,
+        entity_str: &str,
+        entity_kind: Option<SignatureKind>,
+        page: i64,
+    ) -> Response<Signature> {
+        use crate::database::schema::mapping_signature_kind;
+        // use crate::database::schema::mapping_signature_kind::dsl::*;
         use crate::database::schema::signature;
         use crate::database::schema::signature::dsl::*;
 
-        let query = signature
-            .filter(signature::hash.like(format!("{entity_str}%")))
-            .select(signature::all_columns)
-            .paginate(page);
+        let (items, total_items, total_pages) = match entity_kind {
+            Some(entity_kind) => {
+                let query = signature
+                    .inner_join(mapping_signature_kind::table)
+                    .filter(
+                        signature::hash
+                            .like(format!("{entity_str}%"))
+                            .and(signature::is_valid.eq(true))
+                            .and(mapping_signature_kind::kind.eq(entity_kind)),
+                    )
+                    .order_by(signature::id.asc())
+                    .select(signature::all_columns)
+                    .paginate(page);
 
-        let (items, total_items, total_pages) =
-            query.load_and_count_pages::<Signature>(&mut self.connection.get().unwrap()).unwrap();
+                query.load_and_count_pages::<Signature>(&mut self.connection.get().unwrap()).unwrap()
+            }
+
+            None => {
+                let query = signature
+                    .filter(signature::hash.like(format!("{entity_str}%")).and(signature::is_valid.eq(true)))
+                    .order_by(signature::id.asc())
+                    .select(signature::all_columns)
+                    .paginate(page);
+
+                query.load_and_count_pages::<Signature>(&mut self.connection.get().unwrap()).unwrap()
+            }
+        };
 
         match items.len() {
             0 => None,
@@ -106,25 +134,55 @@ impl<'a> RestHandler<'a> {
         }
     }
 
-    pub fn sources_github(&self, entity_id: i32, page: i64) -> Response<GithubRepositoryDatabase> {
+    pub fn sources_github(
+        &self,
+        entity_id: i32,
+        entity_kind: Option<SignatureKind>,
+        page: i64,
+    ) -> Response<GithubRepositoryDatabase> {
         use crate::database::schema::github_repository;
         use crate::database::schema::github_repository::dsl::*;
         use crate::database::schema::mapping_signature_github;
         // use crate::database::schema::mapping_signature_github::dsl::*;
 
-        let query = github_repository
-            .inner_join(mapping_signature_github::table)
-            .filter(
-                mapping_signature_github::signature_id.eq(entity_id).and(github_repository::fork.eq(false)),
-            )
-            .order_by(github_repository::stargazers_count.desc())
-            .distinct_on((github_repository::id, github_repository::stargazers_count))
-            .select(github_repository::all_columns)
-            .paginate(page);
+        let (items, total_items, total_pages) = match entity_kind {
+            Some(entity_kind) => {
+                let query = github_repository
+                    .inner_join(mapping_signature_github::table)
+                    .filter(
+                        mapping_signature_github::signature_id
+                            .eq(entity_id)
+                            .and(mapping_signature_github::kind.eq(entity_kind))
+                            .and(github_repository::fork.eq(false)),
+                    )
+                    .order_by(github_repository::stargazers_count.desc())
+                    .distinct_on((github_repository::id, github_repository::stargazers_count))
+                    .select(github_repository::all_columns)
+                    .paginate(page);
 
-        let (items, total_items, total_pages) = query
-            .load_and_count_pages::<GithubRepositoryDatabase>(&mut self.connection.get().unwrap())
-            .unwrap();
+                query
+                    .load_and_count_pages::<GithubRepositoryDatabase>(&mut self.connection.get().unwrap())
+                    .unwrap()
+            }
+
+            None => {
+                let query = github_repository
+                    .inner_join(mapping_signature_github::table)
+                    .filter(
+                        mapping_signature_github::signature_id
+                            .eq(entity_id)
+                            .and(github_repository::fork.eq(false)),
+                    )
+                    .order_by(github_repository::stargazers_count.desc())
+                    .distinct_on((github_repository::id, github_repository::stargazers_count))
+                    .select(github_repository::all_columns)
+                    .paginate(page);
+
+                query
+                    .load_and_count_pages::<GithubRepositoryDatabase>(&mut self.connection.get().unwrap())
+                    .unwrap()
+            }
+        };
 
         match items.len() {
             0 => None,
@@ -136,22 +194,45 @@ impl<'a> RestHandler<'a> {
         }
     }
 
-    pub fn sources_etherscan(&self, entity_id: i32, page: i64) -> Response<EtherscanContract> {
+    pub fn sources_etherscan(
+        &self,
+        entity_id: i32,
+        entity_kind: Option<SignatureKind>,
+        page: i64,
+    ) -> Response<EtherscanContract> {
         use crate::database::schema::etherscan_contract;
         use crate::database::schema::etherscan_contract::dsl::*;
         use crate::database::schema::mapping_signature_etherscan;
         // use crate::database::schema::mapping_signature_github::dsl::*;
 
-        let query = etherscan_contract
-            .inner_join(mapping_signature_etherscan::table)
-            .filter(mapping_signature_etherscan::signature_id.eq(entity_id))
-            .order_by(etherscan_contract::added_at.desc())
-            .distinct_on((etherscan_contract::id, etherscan_contract::added_at))
-            .select(etherscan_contract::all_columns)
-            .paginate(page);
+        let (items, total_items, total_pages) = match entity_kind {
+            Some(entity_kind) => {
+                let query = etherscan_contract
+                    .inner_join(mapping_signature_etherscan::table)
+                    .filter(
+                        mapping_signature_etherscan::signature_id
+                            .eq(entity_id)
+                            .and(mapping_signature_etherscan::kind.eq(entity_kind)),
+                    )
+                    .order_by(etherscan_contract::added_at.desc())
+                    .distinct_on((etherscan_contract::id, etherscan_contract::added_at))
+                    .select(etherscan_contract::all_columns)
+                    .paginate(page);
 
-        let (items, total_items, total_pages) =
-            query.load_and_count_pages::<EtherscanContract>(&mut self.connection.get().unwrap()).unwrap();
+                query.load_and_count_pages::<EtherscanContract>(&mut self.connection.get().unwrap()).unwrap()
+            }
+            None => {
+                let query = etherscan_contract
+                    .inner_join(mapping_signature_etherscan::table)
+                    .filter(mapping_signature_etherscan::signature_id.eq(entity_id))
+                    .order_by(etherscan_contract::added_at.desc())
+                    .distinct_on((etherscan_contract::id, etherscan_contract::added_at))
+                    .select(etherscan_contract::all_columns)
+                    .paginate(page);
+
+                query.load_and_count_pages::<EtherscanContract>(&mut self.connection.get().unwrap()).unwrap()
+            }
+        };
 
         match items.len() {
             0 => None,

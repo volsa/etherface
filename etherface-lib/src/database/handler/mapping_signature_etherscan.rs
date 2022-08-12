@@ -1,3 +1,5 @@
+//! `mapping_signature_etherscan` table handler.
+
 use crate::database::schema::mapping_signature_etherscan;
 use crate::model::MappingSignatureEtherscan;
 // use crate::database::schema::mapping_signature_etherscan::dsl::*;

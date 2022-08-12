@@ -1,23 +1,18 @@
 CREATE MATERIALIZED VIEW view_signature_insert_rate AS 
-	SELECT DATE(date_trunc('day', added_at)) AS date, COUNT(*) AS count FROM signature WHERE added_at > (CURRENT_DATE - INTERVAL '31 days') GROUP BY 1;
+	SELECT DATE(date_trunc('day', added_at)) AS date, COUNT(*) AS count FROM signature WHERE added_at > (CURRENT_DATE - INTERVAL '31 days') GROUP BY 1 ORDER BY 1 ASC;
 
 CREATE MATERIALIZED VIEW view_signatures_popular_on_github AS 
 	SELECT signature."text", COUNT(*) FROM signature JOIN mapping_signature_github ON signature.id = mapping_signature_github.signature_id GROUP BY 1 ORDER BY 2 DESC LIMIT 100;
 
 CREATE MATERIALIZED VIEW view_signature_kind_distribution AS 
-	SELECT kind, COUNT(DISTINCT signature_id) FROM (
-		SELECT kind, signature_id FROM mapping_signature_github
-		UNION ALL
-		SELECT kind, signature_id FROM mapping_signature_etherscan
-		UNION ALL 
-		SELECT kind, signature_id FROM mapping_signature_fourbyte 
-		) AS unions
-	GROUP BY 1;
+	SELECT kind, COUNT(*) FROM mapping_signature_kind GROUP BY 1;
 
 CREATE MATERIALIZED VIEW view_signature_count_statistics AS 
-	SELECT 	(SELECT COUNT(*) as signature_count FROM signature) 
+	SELECT 	(SELECT COUNT(*) as signature_count FROM signature WHERE is_valid IS TRUE) 
 				AS signature_count, 
-			(SELECT COUNT(DISTINCT signature_id) AS signature_count_github FROM mapping_signature_github) 
+			-- GitHub might have invalid signatures (in comparison to Etherscan where we only scrape ABI content and 4Byte which we assume is correct anyways)
+			-- so that we have to join with the `signature` table in order to count valid signatures only
+			(SELECT COUNT(DISTINCT signature_id) AS signature_count_github FROM mapping_signature_github JOIN signature ON mapping_signature_github.signature_id = signature.id WHERE is_valid IS TRUE) 
 				AS signature_count_github,
 			(SELECT COUNT(DISTINCT signature_id) AS signature_count_etherscan FROM mapping_signature_etherscan)
 				AS signature_count_etherscan,

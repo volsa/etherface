@@ -1,3 +1,5 @@
+//! `mapping_signature_fourbyte` table handler.
+
 use crate::database::schema::mapping_signature_fourbyte;
 use crate::database::schema::mapping_signature_fourbyte::dsl::*;
 use crate::model::MappingSignatureFourbyte;

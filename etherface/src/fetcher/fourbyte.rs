@@ -1,5 +1,14 @@
+//! Fetcher for <https://www.4byte.directory/>
+//!
+//! Polls the <https://www.4byte.directory/api/v1/signatures/> and <https://www.4byte.directory/api/v1/event-signatures/>
+//! API endpoints every [`FETCHER_POLLING_SLEEP_TIME`] seconds inserting new signatures into the database. 
+//! Instead of retrieving all pages from these paginated API endpoints however, the fetcher only retrieves the latest 
+//! pages that contain signatures not present in our database. That is fetch one page, check if the page contains any signature
+//! already present in our database and if not continue with the next page until the condition no longer is valid in which case
+//! sleep before repeating the process starting from page one again.
+
 use crate::fetcher::Fetcher;
-use crate::fetcher::FETCHER_LOOP_SLEEP_TIME;
+use crate::fetcher::FETCHER_POLLING_SLEEP_TIME;
 use anyhow::Error;
 use chrono::Utc;
 use etherface_lib::api::fourbyte::FourbyteClient;
@@ -46,7 +55,7 @@ impl Fetcher for FourbyteFetcher {
                 }
             }
 
-            std::thread::sleep(std::time::Duration::from_secs(FETCHER_LOOP_SLEEP_TIME));
+            std::thread::sleep(std::time::Duration::from_secs(FETCHER_POLLING_SLEEP_TIME));
         }
     }
 }
