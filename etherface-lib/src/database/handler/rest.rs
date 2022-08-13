@@ -59,8 +59,6 @@ impl<'a> RestHandler<'a> {
                     .select(signature::all_columns)
                     .paginate(page);
 
-                println!("{}", diesel::debug_query::<_, _>(&query).to_string());
-
                 query.load_and_count_pages::<Signature>(&mut self.connection.get().unwrap()).unwrap()
             }
 
