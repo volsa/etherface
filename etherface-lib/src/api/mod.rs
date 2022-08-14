@@ -216,7 +216,7 @@ impl ResponseHandler for EtherscanResponseHandler {
 
                     // Anything other than a "1" as a JSON status is an error
                     _ => match json.result.as_str() {
-                        "Invalid API Key" => todo!("Return error"),
+                        "Invalid API Key" => Err(Error::EtherscanInvalidToken(url)),
 
                         "Contract source code not verified" => {
                             Err(Error::EtherscanContractSourceCodeNotVerified(url))
