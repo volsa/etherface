@@ -57,7 +57,7 @@ mod tests {
 
         // https://api.github.com/search/repositories?q=language:solidity%20created:2022-01-01&per_page=100
         let search = ghc.search().solidity_repos_created_at(Utc.ymd(2022, 1, 1)).unwrap();
-        assert_eq!(search.len(), 95);
+        assert_eq!(search.len(), 96);
     }
 
     #[test]

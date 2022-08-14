@@ -45,7 +45,7 @@ mod tests {
 
         let user = ghc.user(29666622).get().unwrap();
         assert_eq!(user.login, "volsa");
-        assert_eq!(user.public_repos, Some(3));
+        assert_eq!(user.public_repos, Some(4));
     }
 
     #[test]
@@ -64,10 +64,10 @@ mod tests {
     fn repos() {
         let ghc = GithubClient::new().unwrap();
 
-        let repos = ghc.user(29666622).repos().unwrap();
-        assert_eq!(repos.len(), 3);
+        let repos = ghc.user(522281549).repos().unwrap();
+        assert_eq!(repos.len(), 4);
 
         let repo_names: Vec<String> = repos.into_iter().map(|x| x.name).collect();
-        assert!(repo_names.contains(&"http-cpp".to_string())); // TODO:
+        assert!(repo_names.contains(&"etherscan".to_string()));
     }
 }

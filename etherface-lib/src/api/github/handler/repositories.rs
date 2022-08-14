@@ -114,10 +114,11 @@ mod tests {
         let ghc = GithubClient::new().unwrap();
         let languages = ghc.repos(44971752).languages().unwrap();
 
-        assert_eq!(languages.len(), 8);
+        assert_eq!(languages.len(), 9);
         assert_eq!(languages.contains_key("Solidity"), true);
         assert_eq!(languages.contains_key("JavaScript"), true);
         assert_eq!(languages.contains_key("TypeScript"), true);
+        assert_eq!(languages.contains_key("TeX"), true);
         assert_eq!(languages.contains_key("HTML"), true);
         assert_eq!(languages.contains_key("C++"), true);
         assert_eq!(languages.contains_key("Python"), true);
