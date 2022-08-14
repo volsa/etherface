@@ -28,14 +28,14 @@ enum Kind {
 }
 
 #[derive(Deserialize)]
-struct ContentQuery {
+struct ContentPath {
     input: String,
     kind: Kind,
     page: i64,
 }
 
 #[derive(Deserialize)]
-struct SourceQuery {
+struct SourcePath {
     signature_id: i32,
     kind: Kind,
     page: i64,
@@ -46,68 +46,68 @@ struct AppState {
 }
 
 #[get("/v1/signatures/text/{kind}/{input}/{page}")]
-async fn signatures_by_text(query: web::Path<ContentQuery>, state: web::Data<AppState>) -> impl Responder {
-    if query.input.len() < 3 {
+async fn signatures_by_text(path: web::Path<ContentPath>, state: web::Data<AppState>) -> impl Responder {
+    if path.input.trim().len() < 3 {
         return HttpResponse::BadRequest().body("Query must have at least 3 characters");
     }
 
-    let kind = match query.kind {
+    let kind = match path.kind {
         Kind::All => None,
         Kind::Function => Some(SignatureKind::Function),
         Kind::Event => Some(SignatureKind::Event),
         Kind::Error => Some(SignatureKind::Error),
     };
 
-    match state.dbc.rest().signatures_where_text_starts_with(&query.input, kind, query.page) {
+    match state.dbc.rest().signatures_where_text_starts_with(&path.input, kind, path.page) {
         Some(signatures) => HttpResponse::Ok().body(serde_json::to_string(&signatures).unwrap()),
         None => HttpResponse::NotFound().finish(),
     }
 }
 
 #[get("/v1/signatures/hash/{kind}/{input}/{page}")]
-async fn signatures_by_hash(query: web::Path<ContentQuery>, state: web::Data<AppState>) -> impl Responder {
-    if query.input.len() != 8 && query.input.len() != 64 {
+async fn signatures_by_hash(path: web::Path<ContentPath>, state: web::Data<AppState>) -> impl Responder {
+    if path.input.trim().len() != 8 && path.input.trim().len() != 64 {
         return HttpResponse::BadRequest().body("Query must have 8 or 64 characters");
     }
 
-    let kind = match query.kind {
+    let kind = match path.kind {
         Kind::All => None,
         Kind::Function => Some(SignatureKind::Function),
         Kind::Event => Some(SignatureKind::Event),
         Kind::Error => Some(SignatureKind::Error),
     };
 
-    match state.dbc.rest().signature_where_hash_starts_with(&query.input, kind, query.page) {
+    match state.dbc.rest().signature_where_hash_starts_with(&path.input, kind, path.page) {
         Some(signatures) => HttpResponse::Ok().body(serde_json::to_string(&signatures).unwrap()),
         None => HttpResponse::NotFound().finish(),
     }
 }
 
 #[get("/v1/sources/github/{kind}/{signature_id}/{page}")]
-async fn sources_github(query: web::Path<SourceQuery>, state: web::Data<AppState>) -> impl Responder {
-    let kind = match query.kind {
+async fn sources_github(path: web::Path<SourcePath>, state: web::Data<AppState>) -> impl Responder {
+    let kind = match path.kind {
         Kind::All => None,
         Kind::Function => Some(SignatureKind::Function),
         Kind::Event => Some(SignatureKind::Event),
         Kind::Error => Some(SignatureKind::Error),
     };
 
-    match state.dbc.rest().sources_github(query.signature_id, kind, query.page) {
+    match state.dbc.rest().sources_github(path.signature_id, kind, path.page) {
         Some(signatures) => HttpResponse::Ok().body(serde_json::to_string(&signatures).unwrap()),
         None => HttpResponse::NotFound().finish(),
     }
 }
 
 #[get("/v1/sources/etherscan/{kind}/{signature_id}/{page}")]
-async fn sources_etherscan(query: web::Path<SourceQuery>, state: web::Data<AppState>) -> impl Responder {
-    let kind = match query.kind {
+async fn sources_etherscan(path: web::Path<SourcePath>, state: web::Data<AppState>) -> impl Responder {
+    let kind = match path.kind {
         Kind::All => None,
         Kind::Function => Some(SignatureKind::Function),
         Kind::Event => Some(SignatureKind::Event),
         Kind::Error => Some(SignatureKind::Error),
     };
 
-    match state.dbc.rest().sources_etherscan(query.signature_id, kind, query.page) {
+    match state.dbc.rest().sources_etherscan(path.signature_id, kind, path.page) {
         Some(signatures) => HttpResponse::Ok().body(serde_json::to_string(&signatures).unwrap()),
         None => HttpResponse::NotFound().finish(),
     }
