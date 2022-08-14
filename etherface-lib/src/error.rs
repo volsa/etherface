@@ -24,9 +24,6 @@ pub enum Error {
     #[error("Invalid Etherscan token '{0}'")]
     EtherscanInvalidToken(String),
 
-    #[error("Failed to deserialize Etherscan JSON response '{0}'; {1}")]
-    EtherscanDeserializeJsonResponse(String, String),
-
     #[error("Failed to retrieve source for '{0}'; Contract source code not verified")]
     EtherscanContractSourceCodeNotVerified(String),
 
@@ -47,19 +44,12 @@ pub enum Error {
     #[error("Environment variable '{0}' is empty")]
     ConfigReadEmptyEnvironmentVariable(&'static str),
 
-    // Misc Errors
-    #[error("Failed to read environment variable '{1}'; {0}")]
-    EnvironmentVariableRead(#[source] std::env::VarError, &'static str),
-
     #[error("Failed to connect to database; {0}")]
     DatabaseConnect(#[from] diesel::result::ConnectionError),
 
     // Parser / Deserializer
     #[error("Failed to deserialize content, invalid ABI?")]
     ParseAbi(#[source] serde_json::Error),
-
-    #[error("Failed to parse pragma version; {0}")]
-    ParsePragma(String),
 
     #[error("Aborting crawling process, one or more background events disconnected from channel")]
     CrawlerChannelDisconnected,
