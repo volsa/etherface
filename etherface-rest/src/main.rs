@@ -47,7 +47,8 @@ struct AppState {
 
 #[get("/v1/signatures/text/{kind}/{input}/{page}")]
 async fn signatures_by_text(path: web::Path<ContentPath>, state: web::Data<AppState>) -> impl Responder {
-    if path.input.trim().len() < 3 {
+    let input_trimmed = path.input.trim();
+    if input_trimmed.len() < 3 {
         return HttpResponse::BadRequest().body("Query must have at least 3 characters");
     }
 
@@ -58,7 +59,7 @@ async fn signatures_by_text(path: web::Path<ContentPath>, state: web::Data<AppSt
         Kind::Error => Some(SignatureKind::Error),
     };
 
-    match state.dbc.rest().signatures_where_text_starts_with(&path.input, kind, path.page) {
+    match state.dbc.rest().signatures_where_text_starts_with(&input_trimmed, kind, path.page) {
         Some(signatures) => HttpResponse::Ok().body(serde_json::to_string(&signatures).unwrap()),
         None => HttpResponse::NotFound().finish(),
     }
@@ -66,7 +67,12 @@ async fn signatures_by_text(path: web::Path<ContentPath>, state: web::Data<AppSt
 
 #[get("/v1/signatures/hash/{kind}/{input}/{page}")]
 async fn signatures_by_hash(path: web::Path<ContentPath>, state: web::Data<AppState>) -> impl Responder {
-    if path.input.trim().len() != 8 && path.input.trim().len() != 64 {
+    let mut input_trimmed = path.input.trim();
+    if input_trimmed.starts_with("0x") {
+        input_trimmed = &input_trimmed[2..];
+    }
+
+    if input_trimmed.len() != 8 && input_trimmed.len() != 64 {
         return HttpResponse::BadRequest().body("Query must have 8 or 64 characters");
     }
 
@@ -77,7 +83,7 @@ async fn signatures_by_hash(path: web::Path<ContentPath>, state: web::Data<AppSt
         Kind::Error => Some(SignatureKind::Error),
     };
 
-    match state.dbc.rest().signature_where_hash_starts_with(&path.input, kind, path.page) {
+    match state.dbc.rest().signature_where_hash_starts_with(&input_trimmed, kind, path.page) {
         Some(signatures) => HttpResponse::Ok().body(serde_json::to_string(&signatures).unwrap()),
         None => HttpResponse::NotFound().finish(),
     }
