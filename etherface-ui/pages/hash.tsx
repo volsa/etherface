@@ -1,11 +1,11 @@
 import axios from 'axios'
 import React, { useState } from 'react'
 import Alert from '../components/Alert'
+import Layout from '../components/Layout'
 import Navbar from '../components/Navbar'
 import SearchBar from '../components/SearchBar'
 import Table from '../components/Table'
-import { Response, Signature, SignatureKind } from '../lib/types'
-import Head from 'next/head'
+import { Signature, SignatureKind } from '../lib/types'
 
 
 
@@ -201,9 +201,8 @@ const Hash = () => {
     }
 
     return (
-        <div>
+        <Layout>
             <Navbar />
-            <Head><title>Ethereum Signature Database</title></Head>
             <div className='grid grid-cols-8'>
                 <div className='col-start-3 col-end-7'>
                     <div className='col-start-2 col-end-8 space-y-2 mt-4'>
@@ -298,7 +297,7 @@ const Hash = () => {
                     }
                 </div>
             </div>
-        </div >
+        </Layout>
     )
 }
 

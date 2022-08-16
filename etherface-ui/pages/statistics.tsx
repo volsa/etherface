@@ -2,9 +2,9 @@ import axios from 'axios';
 import React, { useEffect, useState } from 'react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import Navbar from '../components/Navbar'
-import Head from 'next/head'
 import Alert from '../components/Alert';
 import { Statistics } from '../lib/types'
+import Layout from '../components/Layout';
 
 
 const Statistics = () => {
@@ -42,9 +42,7 @@ const Statistics = () => {
     }
 
     return (
-        <div>
-            <Head><title>Ethereum Signature Database</title></Head>
-
+        <Layout>
             <Navbar />
             <div className='grid grid-cols-8 text-md'>
                 {items &&
@@ -109,7 +107,7 @@ const Statistics = () => {
                     </div>
                 }
             </div>
-        </div >
+        </Layout>
     )
 }
 
