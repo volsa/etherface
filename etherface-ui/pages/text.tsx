@@ -40,7 +40,7 @@ const Text = () => {
     }
 
     const changeHandler = (event) => {
-        setInput(event.target.value)
+        setInput(event.target.value.trim())
     }
 
     const fetcherTextEndpoint = async (query: string, page: number) => {

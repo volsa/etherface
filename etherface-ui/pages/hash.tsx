@@ -115,7 +115,7 @@ const Hash = () => {
     }
 
     const changeHandler = (event) => {
-        setInput(event.target.value)
+        setInput(event.target.value.trim())
     }
 
     const fetcherHashEndpoint = async (query: string, page: number) => {
