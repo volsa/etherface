@@ -1,11 +1,11 @@
 import axios from 'axios'
 import React, { useState } from 'react'
 import Alert from '../components/Alert'
+import Layout from '../components/Layout'
 import Navbar from '../components/Navbar'
 import SearchBar from '../components/SearchBar'
 import Table from '../components/Table'
 import { SignatureKind } from '../lib/types'
-import Head from 'next/head'
 
 
 const Text = () => {
@@ -82,8 +82,7 @@ const Text = () => {
     ]
 
     return (
-        <div>
-            <Head><title>Ethereum Signature Database</title></Head>
+        <Layout>
             <Navbar />
             <div className='grid grid-cols-8'>
                 <div className='col-start-3 col-end-7'>
@@ -130,9 +129,8 @@ const Text = () => {
                 <div className='col-start-2 col-end-8'>
                     {query && <Table query={query} queryKind={queryKind} fetcher={fetcherTextEndpoint} columns={columnDef} />}
                 </div>
-
             </div>
-        </div>
+        </Layout>
     )
 }
 
