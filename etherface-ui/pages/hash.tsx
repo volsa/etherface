@@ -209,7 +209,7 @@ const Hash = () => {
                         <div className='space-y-2'>
                             <SearchBar
                                 input={input}
-                                placeholder={'Find signatures by their hash, e.g. 70a08231 (or the full hash)'}
+                                placeholder={'Find signatures by their hash, e.g. 0x70a08231 or the full hash'}
                                 submitHandler={submitHandler}
                                 changeHandler={changeHandler}
                             />
@@ -220,9 +220,9 @@ const Hash = () => {
                                         <span>Some tips:</span>
                                         <span>- Searches are case sensitive yielding signatures starting with your query</span>
                                         <span>- Filtering by function, event and error signatures is supported by starting your query with</span>
-                                        <span className='ml-4'>- <code>f#</code> to find functions only, e.g. <code>f#70a08231</code></span>
-                                        <span className='ml-4'>- <code>e#</code> to find events only, e.g. <code>e#2d339b1e</code></span>
-                                        <span className='ml-4'>- <code>err#</code> to find errors only, e.g. <code>err#fe7507e6</code></span>
+                                        <span className='ml-4'>- <code>f#</code> to find functions only, e.g. <code>f#0x70a08231</code></span>
+                                        <span className='ml-4'>- <code>e#</code> to find events only, e.g. <code>e#0x2d339b1e</code></span>
+                                        <span className='ml-4'>- <code>err#</code> to find errors only, e.g. <code>err#0xfe7507e6</code></span>
                                     </div>
                                 }
                                 errorMessage={undefined}

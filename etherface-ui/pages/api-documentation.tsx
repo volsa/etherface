@@ -60,7 +60,7 @@ const ApiDocumentation = () => {
                                 <p>Returns a paginated list of signatures where</p>
                                 <ul className='list-disc list-inside'>
                                     <li className='list-item'><code>kind</code> is either <code>function</code>, <code>event</code>, <code>error</code> or <code>all</code></li>
-                                    <li className='list-item'><code>query</code> is the signature hash (either 8 or 64 characters long)</li>
+                                    <li className='list-item'><code>query</code> is the signature hash (either 8 or 64 characters long, excluding the <code>0x</code> head which is also optional)</li>
                                     <li className='list-item'><code>page</code> is the page index, starting at 1</li>
                                 </ul>
                                 <p><b>Example:</b> <LinkItem text='api.etherface.io/v1/signatures/hash/all/70a08231/1' url='https://api.etherface.io/v1/signatures/hash/all/70a08231/1' /> returns all signatures starting with the hash <code>70a08231</code> (case sensitive!)</p>
