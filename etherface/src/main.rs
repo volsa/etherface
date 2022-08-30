@@ -43,7 +43,8 @@ use std::sync::mpsc::Sender;
 fn main() -> Result<(), Error> {
     CombinedLogger::init(vec![
         TermLogger::new(
-            LevelFilter::max(),
+            // LevelFilter::max(),
+            LevelFilter::Debug,
             ConfigBuilder::new()
                 .add_filter_allow_str("etherface")
                 .set_time_format_str("[%d.%m.%Y; %T]")

@@ -15,6 +15,7 @@ use etherface_lib::api::fourbyte::FourbyteClient;
 use etherface_lib::database::handler::DatabaseClient;
 use etherface_lib::model::MappingSignatureFourbyte;
 use etherface_lib::model::SignatureWithMetadata;
+use log::info;
 
 #[derive(Debug)]
 pub struct FourbyteFetcher;
@@ -63,7 +64,7 @@ impl Fetcher for FourbyteFetcher {
 fn initial_data_retrieval(dbc: &DatabaseClient, function_endpoint: bool) -> Result<(), Error> {
     let mut fbc = FourbyteClient::new();
 
-    println!("Retrieving all 4Byte signatures...");
+    info!("Retrieving all 4Byte signatures...");
     let mut signatures = Vec::new();
     match function_endpoint {
         true => {
@@ -78,7 +79,7 @@ fn initial_data_retrieval(dbc: &DatabaseClient, function_endpoint: bool) -> Resu
         }
     }
 
-    println!("Inserting retrieved signatures...");
+    info!("Inserting retrieved 4Byte signatures...");
     for signature in signatures {
         let inserted_signature = dbc.signature().insert(&signature);
         let mapping = MappingSignatureFourbyte {

@@ -22,6 +22,7 @@ use etherface_lib::model::GithubRepository;
 use etherface_lib::model::GithubUser;
 use log::debug;
 use log::info;
+use log::trace;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
@@ -186,10 +187,9 @@ impl GithubCrawler {
 
                 for repo in unvisited_repos.iter().take(NUM_RESOURCE_VISITS_PER_CRAWLING_ITERATION) {
                     let stargazers = self.get_stargazers_or_set_repository_deleted(repo.id)?;
-                    // trace!("Visiting {}", repo.html_url);
+                    trace!("Visiting {}", repo.html_url);
 
                     for stargazer in stargazers {
-                        // trace!("On {idx} of {}", stargazers.len());
                         if self.dbc.github_user().insert_if_not_exists(&stargazer).visited_at.is_some() {
                             // We don't want to accidentally re-visit stargazers
                             continue;
@@ -300,7 +300,7 @@ impl GithubCrawler {
 
     fn insert_recently_created_solidity_repositories(&self, date: Date<Utc>) -> Result<(), Error> {
         let repos = self.search_solidity_repositories_starting_from(date, true)?;
-        println!("About to insert {} repositories", repos.len());
+        debug!("Inserting {} repositories", repos.len());
 
         for repo in repos {
             self.insert_repository_if_not_exists(&repo, false)?;
@@ -311,7 +311,7 @@ impl GithubCrawler {
 
     fn upsert_recently_updated_solidity_repositories(&self, date: Date<Utc>) -> Result<(), Error> {
         let repos = self.search_solidity_repositories_starting_from(date, false)?;
-        println!("About to upsert {} repos", repos.len());
+        debug!("Upserting {} repos", repos.len());
 
         for repo in self.search_solidity_repositories_starting_from(date, false)? {
             if self.dbc.github_repository().get_by_id(repo.id).is_none() {
@@ -321,7 +321,7 @@ impl GithubCrawler {
 
             // Repository already present in database, update it and re-trigger the scraping process
             if let Some(ratio) = self.get_solidity_ratio_or_set_repository_deleted(repo.id)? {
-                println!("Updating {}", repo.html_url);
+                trace!("Updating {}", repo.html_url);
                 self.dbc.github_repository().update(&repo, ratio);
                 self.dbc.github_repository().set_scraped_to_null(repo.id);
             }
