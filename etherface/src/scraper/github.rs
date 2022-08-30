@@ -16,6 +16,7 @@ use etherface_lib::model::MappingSignatureGithub;
 use etherface_lib::parser;
 use log::debug;
 use log::error;
+use log::trace;
 use std::process::Command;
 use std::process::Stdio;
 use std::thread::sleep;
@@ -47,9 +48,15 @@ impl Scraper for GithubScraper {
         std::fs::create_dir_all(PATH_CLONE_DIR)?;
 
         loop {
-            println!("Scraping Job-Queue: {}", dbc.github_repository().get_unscraped_with_forks().len());
+            let repos = dbc.github_repository().get_unscraped_with_forks();
 
-            for repo in dbc.github_repository().get_unscraped_with_forks() {
+            if repos.is_empty() {
+                sleep(std::time::Duration::from_secs(SCRAPER_SLEEP_DURATION));
+                continue;
+            }
+
+            debug!("Scraping {} repositories...", dbc.github_repository().get_unscraped_with_forks().len());
+            for repo in repos {
                 // Repository names within GitHub can start with a dash, which any CLI application such as `git`
                 // interprets as an argument. Hence we pre-emptively replace ALL dashes with an underscore because
                 // something like `git clone https://github.com/foo/-bar -bar` would result in an error rather
@@ -75,7 +82,7 @@ impl Scraper for GithubScraper {
                 {
                     Ok(status) => status,
                     Err(why) => {
-                        println!("Failed to clone {}; {why}", repo.html_url);
+                        error!("Failed to clone {}; {why}", repo.html_url);
                         continue;
                     }
                 };
@@ -105,7 +112,7 @@ impl Scraper for GithubScraper {
                     }
                 }
 
-                println!("Scraping {}", clone_name);
+                trace!("Scraping {}", clone_name);
                 for file in get_sol_files(&clone_name) {
                     if let Ok(content) = std::fs::read_to_string(&file.path) {
                         let signatures = match file.kind {
@@ -135,9 +142,6 @@ impl Scraper for GithubScraper {
                 std::fs::remove_dir_all(clone_name)?;
             }
 
-            // Sleep 5 minutes between each iteration
-            println!("Done scraping, sleeping 5 minutes");
-            sleep(std::time::Duration::from_secs(SCRAPER_SLEEP_DURATION));
         }
     }
 }
