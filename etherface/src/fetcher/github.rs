@@ -190,7 +190,10 @@ impl GithubCrawler {
 
                     for stargazer in stargazers {
                         // trace!("On {idx} of {}", stargazers.len());
-                        self.dbc.github_user().insert_if_not_exists(&stargazer);
+                        if self.dbc.github_user().insert_if_not_exists(&stargazer).visited_at.is_some() {
+                            // We don't want to accidentally re-visit stargazers
+                            continue;
+                        }
 
                         self.get_and_insert_user_owned_repos(stargazer.id, true)?;
                         self.get_and_insert_user_starred_repos(stargazer.id, true)?;

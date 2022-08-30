@@ -18,16 +18,19 @@ impl<'a> GithubUserHandler<'a> {
         GithubUserHandler { connection }
     }
 
-    pub fn insert_if_not_exists(&self, entity: &GithubUser) {
+    pub fn insert_if_not_exists(&self, entity: &GithubUser) -> GithubUserDatabase {
+        if let Some(user) = self.get_by_id(entity.id) {
+            return user;
+        }
+
         diesel::insert_into(github_user::table)
             .values(entity.to_insertable())
-            .on_conflict_do_nothing()
-            .execute(self.connection)
-            .unwrap();
+            .get_result(self.connection)
+            .unwrap()
     }
 
-    pub fn get_by_id(&self, entity_id: i32) -> GithubUserDatabase {
-        github_user.filter(id.eq(entity_id)).get_result(self.connection).unwrap()
+    fn get_by_id(&self, entity_id: i32) -> Option<GithubUserDatabase> {
+        github_user.filter(id.eq(entity_id)).first(self.connection).optional().unwrap()
     }
 
     pub fn repo_count(&self, entity_id: i32) -> i64 {
