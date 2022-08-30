@@ -1,5 +1,5 @@
 CREATE MATERIALIZED VIEW view_signature_insert_rate AS 
-	SELECT DATE(date_trunc('day', added_at)) AS date, COUNT(*) AS count FROM signature WHERE added_at > (CURRENT_DATE - INTERVAL '31 days') GROUP BY 1 ORDER BY 1 ASC;
+	SELECT DATE(date_trunc('day', added_at)) AS date, COUNT(*) AS count FROM signature WHERE added_at > (CURRENT_DATE - INTERVAL '14 days') GROUP BY 1 ORDER BY 1 ASC;
 
 CREATE MATERIALIZED VIEW view_signatures_popular_on_github AS 
 	SELECT signature."text", COUNT(*) FROM signature JOIN mapping_signature_github ON signature.id = mapping_signature_github.signature_id GROUP BY 1 ORDER BY 2 DESC LIMIT 100;
