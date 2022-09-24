@@ -35,7 +35,7 @@ async fn main() -> std::io::Result<()> {
                 .service(v1::sources_etherscan)
                 .service(v1::statistics)
                 .wrap(Cors::permissive())
-                .wrap(Logger::new("(%Ts) %a: %r").log_target("v1::logger")),
+                .wrap(Logger::new("(%Ts, %s) %a: %r").log_target("v1::logger")),
         )
     })
     .bind_openssl("65.21.54.11:443", builder)?

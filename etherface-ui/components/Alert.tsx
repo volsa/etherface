@@ -17,7 +17,7 @@ const Alert = ({ kind, infoMessage, errorMessage, statusCode, query }) => {
                     }
 
                     if (statusCode == 400) {
-                        return 'Bad request, make sure your query is at least either 3 (text search) or 8 / 64 (hash search) characters long'
+                        return 'Invalid query, should be at least 3 characters long (text search) or 8 / 64 (hash search, excluding 0x)'
                     }
 
                     if (statusCode == 404) {
