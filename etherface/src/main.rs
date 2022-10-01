@@ -58,7 +58,7 @@ fn main() -> Result<(), Error> {
                 .add_filter_allow_str("etherface")
                 .set_time_format_str("[%d.%m.%Y; %T]")
                 .build(),
-            std::fs::OpenOptions::new().append(true).open("etherface.log")?,
+            std::fs::OpenOptions::new().append(true).create(true).open("etherface.log")?,
         ),
     ])
     .unwrap();
