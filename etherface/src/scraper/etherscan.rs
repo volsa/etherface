@@ -1,5 +1,5 @@
 //! Scraper for <https://etherscan.io/>
-//! 
+//!
 //! Fetches all unscraped Etherscan contract addresses from the database, downloads their ABI content using
 //! the <https://api.etherscan.io/api?module=contract&action=getabi> endpoint extracting signatures. These
 //! extracted signatures are then inserted into the database with a reference to the contract address, marking
@@ -26,18 +26,20 @@ impl Scraper for EtherscanScraper {
             // Scrape signatures from unvisited contracts
             for contract in dbc.etherscan_contract().get_unvisited() {
                 if let Ok(abi_content) = esc.get_abi(&contract.address) {
-                    // Insert all scraped signatures
-                    for signature in parser::from_abi(&abi_content)? {
-                        let inserted_signature = dbc.signature().insert(&signature);
+                    if let Ok(signatures) = parser::from_abi(&abi_content) {
+                        // Insert all scraped signatures
+                        for signature in signatures {
+                            let inserted_signature = dbc.signature().insert(&signature);
 
-                        let mapping = MappingSignatureEtherscan {
-                            signature_id: inserted_signature.id,
-                            contract_id: contract.id,
-                            kind: signature.kind,
-                            added_at: Utc::now(),
-                        };
+                            let mapping = MappingSignatureEtherscan {
+                                signature_id: inserted_signature.id,
+                                contract_id: contract.id,
+                                kind: signature.kind,
+                                added_at: Utc::now(),
+                            };
 
-                        dbc.mapping_signature_etherscan().insert(&mapping);
+                            dbc.mapping_signature_etherscan().insert(&mapping);
+                        }
                     }
 
                     dbc.etherscan_contract().set_visited(&contract);
