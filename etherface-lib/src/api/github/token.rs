@@ -69,7 +69,7 @@ impl TokenManager {
                 // See the docs for the differences between the core and search ratelimit:
                 // https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting
                 // https://docs.github.com/en/rest/reference/search#rate-limit
-                info!("Search ratelimit drained, sleeping one minute to reset");
+                info!("Github search ratelimit drained, sleeping one minute to reset");
                 std::thread::sleep(std::time::Duration::from_secs(60));
                 return Ok(());
             }
@@ -95,11 +95,11 @@ impl TokenManager {
 
         match best.1 {
             0 => {
-                info!("All tokens drained, sleeping {SLEEP_DURATION_TOKENS_DRAINED} seconds");
+                info!("All github tokens drained, sleeping {SLEEP_DURATION_TOKENS_DRAINED} seconds");
                 std::thread::sleep(std::time::Duration::from_secs(SLEEP_DURATION_TOKENS_DRAINED));
             }
             _ => {
-                info!("Replacing activen token {} with {}", self.active, best.0);
+                info!("Replacing activen github token {} with {}", self.active, best.0);
                 self.active = best.0.to_string();
             }
         }
@@ -122,12 +122,12 @@ impl TokenManager {
         }
 
         for token in invalid_tokens {
-            warn!("Removing expired / invalid token {}", token);
+            warn!("Removing expired / invalid github token {}", token);
             self.pool.retain(|x| *x != token);
         }
 
         // Replace the activen token in case it _might_ have been removed from the pool
-        info!("Replacing active token {} with {}", self.active, self.pool[0]);
+        info!("Replacing active github token {} with {}", self.active, self.pool[0]);
         self.active = self.pool[0].to_string();
         Ok(())
     }
@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn refresh() {
         let mut token_manager = TokenManager::new().unwrap();
-        assert!(token_manager.pool.len() >= 3, "Need at least 3 valid tokens");
+        assert!(token_manager.pool.len() >= 3, "Need at least 3 valid github tokens");
         token_manager.pool.truncate(3); // 3 tokens are more than plenty for this test
 
         let mut token_ratelimit_tuple: Vec<(String, usize)> = Vec::new();
@@ -196,7 +196,7 @@ mod tests {
     #[test]
     fn cleanup_every_token_valid() {
         let mut token_manager = TokenManager::new().unwrap();
-        assert!(token_manager.pool.len() >= 3, "Need at least 3 valid tokens");
+        assert!(token_manager.pool.len() >= 3, "Need at least 3 valid github tokens");
 
         // Check if all tokens are valid
         for token in &token_manager.pool {
@@ -212,7 +212,7 @@ mod tests {
     #[test]
     fn cleanup_every_token_valid_but_one() {
         let mut token_manager = TokenManager::new().unwrap();
-        assert!(token_manager.pool.len() >= 3, "Need at least 3 valid tokens");
+        assert!(token_manager.pool.len() >= 3, "Need at least 3 valid github tokens");
 
         // Check if all tokens are valid
         for token in &token_manager.pool {
@@ -247,7 +247,7 @@ mod tests {
     #[test]
     fn cleanup_every_token_invalid_but_one() {
         let mut token_manager = TokenManager::new().unwrap();
-        assert!(token_manager.pool.len() >= 3, "Need at least 3 valid tokens");
+        assert!(token_manager.pool.len() >= 3, "Need at least 3 valid github tokens");
 
         // Check if all tokens are valid
         for token in &token_manager.pool {
