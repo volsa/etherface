@@ -65,5 +65,6 @@ The project itself is heavily documented, which can be further inspected using R
     cargo r --release --bin etherface-rest
 
     # In the ./etherface/etherface-ui folder
+    npm install
     npm run dev
     ```
