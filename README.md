@@ -45,8 +45,9 @@ The project itself is heavily documented, which can be further inspected using R
         cargo install diesel_cli --no-default-features --features postgres
         ```
 2. Populate the `.env` file
-3. Execute `docker-compose up -d`
-4. Log into postgres, create the `etherface` database and run the diesel-rs migration
+    * Github tokens to be used are "Classic" and of the form `ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX`. The token will work with the default permissions - nothing additional must be granted.
+4. Execute `docker-compose up -d`
+5. Log into postgres, create the `etherface` database and run the diesel-rs migration
     ```
     # Create etherface database
     docker ps                           # copy the CONTAINER ID of the IMAGE 'postgres:XX'
