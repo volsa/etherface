@@ -1,21 +1,8 @@
 import React from 'react'
 import Layout from '../components/Layout'
+import LinkItem from '../components/LinkItem'
 import Navbar from '../components/Navbar'
-
-const LinkItem = ({ text, url }) => {
-    return (<a target='_blank' rel="noreferrer" className='underline underline-offset-2 text-gray-400 hover:text-black duration-200' href={url}>{text}</a>)
-}
-
-const Paragraph = ({ title, content }) => {
-    return (
-        <div className='w-11/12 2xl:w-1/2 mt-4'>
-            <div className='p-4'>
-                <div className='text-2xl text-black mb-1'>{title}</div>
-                <div className='text text-gray-600'>{content}</div>
-            </div>
-        </div>
-    )
-}
+import Paragraph from '../components/Paragraph'
 
 const ApiDocumentation = () => {
     return (
