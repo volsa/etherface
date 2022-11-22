@@ -20,7 +20,7 @@ const About = () => {
                             and is essential when communicating with smart contracts. Specifically the first 4 byte of this input data, i.e. <code>0x095ea7b3</code>, specify which function in the
                             smart contract gets executed. What exactly does <code>0x095ea7b3</code> translate to though? Clearly some mapping between hashes and their clear form is needed to decode these functions.
                             Luckily databases full of such mappings exist and you are currently on one of them. Etherfaces database for example has a mapping between <code>0x095ea7b3</code> and <code>approve(address,uint256)</code>.
-                            Not only do we know there is a transaction between A and B but more importantly which function is executed, making such contract transaction more transparent.
+                            Not only do we now know there is a transaction between A and B but more importantly which function is executed, making such contract transaction more transparent.
                             <br />
                             <br />
                             Such signature databases are nothing new, in fact there were two other databases prior to Etherface namely <LinkItem text='4Byte' url='https://www.4byte.directory/' /> and <LinkItem text='samczsun' url='https://sig.eth.samczsun.com/' />.
