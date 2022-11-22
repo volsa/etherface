@@ -2,7 +2,7 @@ import React from 'react'
 
 const Alert = ({ kind, infoMessage, errorMessage, statusCode, query }) => {
     return (
-        <div className={`p-2 text-center rounded ${kind === 'info'
+        <div className={`p-1 text-center rounded ${kind === 'info'
             ? 'bg-blue-50 text-blue-900'
             : 'bg-red-50 text-red-900'}`
         }>
