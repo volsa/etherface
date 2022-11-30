@@ -1,7 +1,7 @@
 [
     {
         "name": "id",
-        "type": "STRING",
+        "type": "INTEGER",
         "mode": "REQUIRED",
         "description": "primary key"
     },
