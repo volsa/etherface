@@ -1,0 +1,32 @@
+[
+    {
+        "name": "id",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "primary key"
+    },
+    {
+        "name": "text",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "human-readable function name and argument type list"
+    },
+    {
+        "name": "hash",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "keccak hash of `text`"
+    },
+    {
+        "name": "is_valid",
+        "type": "BOOLEAN",
+        "mode": "REQUIRED",
+        "description": "TODO ???"
+    },
+    {
+        "name": "added_at",
+        "type": "TIMESTAMP",
+        "mode": "REQUIRED",
+        "description": "when the signature was first identified from another source (github, etherscan, etc)"
+    }
+]

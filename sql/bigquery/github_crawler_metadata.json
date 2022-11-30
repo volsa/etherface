@@ -1,0 +1,26 @@
+[
+    {
+        "name": "id",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "primary key"
+    },
+    {
+        "name": "last_user_check",
+        "type": "TIMESTAMP",
+        "mode": "REQUIRED",
+        "description": "when the user data were scraped"
+    },
+    {
+        "name": "last_repository_check",
+        "type": "TIMESTAMP",
+        "mode": "REQUIRED",
+        "description": "when the repository data were scraped"
+    },
+    {
+        "name": "last_repository_search",
+        "type": "TIMESTAMP",
+        "mode": "REQUIRED",
+        "description": "when the repositories were last searched"
+    }
+]
