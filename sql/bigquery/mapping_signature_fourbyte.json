@@ -6,12 +6,6 @@
         "description": "signature id"
     },
     {
-        "name": "contract_id",
-        "type": "INTEGER",
-        "mode": "REQUIRED",
-        "description": "contract_id"
-    },
-    {
         "name": "kind",
         "type": "STRING",
         "mode": "REQUIRED",

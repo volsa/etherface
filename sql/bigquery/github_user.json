@@ -32,7 +32,7 @@
     {
         "name": "visited_at",
         "type": "TIMESTAMP",
-        "mode": "REQUIRED",
+        "mode": "NULLABLE",
         "description": "user scraper visited time"
     }
 ]
