@@ -22,5 +22,5 @@ fi
 
 for T in `echo "SELECT DISTINCT table_name FROM information_schema.columns WHERE table_schema='public' AND position('_' in table_name) <> 1 ORDER BY 1" | psql $DBNAME -h $DBHOST -U $DBUSER -P format=unaligned -P tuples_only -P fieldsep=\,`; do
   echo $T
-  psql $DBNAME -h $DBHOST -U $DBUSER -P format=unaligned -P tuples_only -P fieldsep='___SEPARATOR___' -c "SELECT * FROM $T" | perl -ne 's/\t/\\t/g;s/___SEPARATOR___/\t/g;print' | gsutil cp - $GSPATH/$T.csv
+  echo psql $DBNAME -h $DBHOST -U $DBUSER -c "\COPY $T TO '$T.csv' DELIMITER ',' CSV;"; gsutil -m cp $T.csv $GSPATH; rm -rf $T.csv
 done
