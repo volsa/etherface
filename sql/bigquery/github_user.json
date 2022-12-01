@@ -1,0 +1,38 @@
+[
+    {
+        "name": "id",
+        "type": "INTEGER",
+        "mode": "REQUIRED",
+        "description": "primary key"
+    },
+    {
+        "name": "login",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "user login"
+    },
+    {
+        "name": "html_url",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "user profile URL"
+    },
+    {
+        "name": "is_deleted",
+        "type": "BOOLEAN",
+        "mode": "REQUIRED",
+        "description": "has user been deleted?"
+    },
+    {
+        "name": "added_at",
+        "type": "TIMESTAMP",
+        "mode": "REQUIRED",
+        "description": "user added time"
+    },
+    {
+        "name": "visited_at",
+        "type": "TIMESTAMP",
+        "mode": "NULLABLE",
+        "description": "user scraper visited time"
+    }
+]

@@ -1,0 +1,20 @@
+[
+    {
+        "name": "signature_id",
+        "type": "INTEGER",
+        "mode": "REQUIRED",
+        "description": "signature id"
+    },
+    {
+        "name": "kind",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "type of signature"
+    },
+    {
+        "name": "added_at",
+        "type": "TIMESTAMP",
+        "mode": "REQUIRED",
+        "description": "when first observed"
+    }
+]

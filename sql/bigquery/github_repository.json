@@ -1,0 +1,104 @@
+[
+    {
+        "name": "id",
+        "type": "INTEGER",
+        "mode": "REQUIRED",
+        "description": "primary key"
+    },
+    {
+        "name": "owner_id",
+        "type": "INTEGER",
+        "mode": "REQUIRED",
+        "description": "repository owner"
+    },
+    {
+        "name": "name",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "repository name"
+    },
+    {
+        "name": "html_url",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "repository browser-friendly URL"
+    },
+    {
+        "name": "language",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "repository language"
+    },
+    {
+        "name": "stargazers_count",
+        "type": "INTEGER",
+        "mode": "REQUIRED",
+        "description": "repository stars count"
+    },
+    {
+        "name": "size",
+        "type": "INTEGER",
+        "mode": "REQUIRED",
+        "description": "repository size, in bytes"
+    },
+    {
+        "name": "fork",
+        "type": "BOOLEAN",
+        "mode": "REQUIRED",
+        "description": "is this a fork of another repository?"
+    },
+    {
+        "name": "created_at",
+        "type": "TIMESTAMP",
+        "mode": "REQUIRED",
+        "description": "repository creation time"
+    },
+    {
+        "name": "pushed_at",
+        "type": "TIMESTAMP",
+        "mode": "REQUIRED",
+        "description": "repository last push time"
+    },
+    {
+        "name": "updated_at",
+        "type": "TIMESTAMP",
+        "mode": "REQUIRED",
+        "description": "repository scrape update time"
+    },
+    {
+        "name": "scraped_at",
+        "type": "TIMESTAMP",
+        "mode": "NULLABLE",
+        "description": "repository scrape time"
+    },
+    {
+        "name": "visited_at",
+        "type": "TIMESTAMP",
+        "mode": "NULLABLE",
+        "description": "repository scrape visit time"
+    },
+    {
+        "name": "added_at",
+        "type": "TIMESTAMP",
+        "mode": "REQUIRED",
+        "description": "repository scrape added time"
+    },
+    {
+        "name": "solidity_ratio",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "fraction of repository that is of language solidity"
+    },
+    {
+        "name": "is_deleted",
+        "type": "BOOLEAN",
+        "mode": "REQUIRED",
+        "description": "repository deletion status"
+    },
+    {
+        "name": "found_by_crawling",
+        "type": "BOOLEAN",
+        "mode": "REQUIRED",
+        "description": "did we find this repository by crawling?"
+    }
+]

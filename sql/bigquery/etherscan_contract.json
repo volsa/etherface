@@ -1,0 +1,50 @@
+[
+    {
+        "name": "id",
+        "type": "INTEGER",
+        "mode": "REQUIRED",
+        "description": "primary key"
+    },
+    {
+        "name": "address",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "contract address"
+    },
+    {
+        "name": "name",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "curated name of contract"
+    },
+    {
+        "name": "compiler",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "compiler used to create bytecode"
+    },
+    {
+        "name": "compiler_version",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "compiler version used to create bytecode"
+    },
+    {
+        "name": "url",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "URL from which contract data were scraped"
+    },
+    {
+        "name": "scraped_at",
+        "type": "TIMESTAMP",
+        "mode": "NULLABLE",
+        "description": "when the contract data were scraped"
+    },
+    {
+        "name": "added_at",
+        "type": "TIMESTAMP",
+        "mode": "REQUIRED",
+        "description": "when the contract was first queued for scraping"
+    }
+]
