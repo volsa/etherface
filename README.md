@@ -1,19 +1,26 @@
 # Etherface
-This project, similar to [4Byte](https://github.com/pipermerriam/ethereum-function-signature-registry), aims to be an Ethereum Signature Database with two upgrades namely 
-1) Etherface runs indefinitely finding signatures by itself, without any human intervention whatsoever. This is done by combination of crawling / polling websites where Solidity code can be found and consequently signatures can be scraped from (currently GitHub, Etherscan and 4Byte*). By comparison 4Byte relies on user submitted code, signatures and installed GitHub Webhooks.
-2) Etherface provides source code references for its signatures, i.e. GitHub repositories / Etherscan URLs where these signatures were scraped from. The idea behind this is to give users a better understanding what a given signature might be used for.
+Similar to [4Byte](https://www.4byte.directory/) and [eth.samczsun](https://sig.eth.samczsun.com/), Etherface is an Ethereum Signature Database currently hosting ~2.25 million function, event and error signatures making it the biggest publicly available database. This is made possible because Etherface compared to other providers consists of a crawler, finding signatures from GitHub, Etherscan and 4Byte. Consequentely this means Etherface runs 24/7 finding new signatures indefinitely without any human-based guiding. For comparison, 4Byte relies on user submitted data whereas eth.samczsun also relies on user submitted data but was (probably) initially seeded with some private database.
 
-Etherface is open-source and provides a frontend on [etherface.io](https://etherface.io/).
+Furthermore because a crawler is implemented, Etherface provides not only signatures but also where these signatures where found at. That is if you search for a signature on Etherface, you'll most likely get a response with it's decoded clear-text form as well as either a GitHub repository or a Etherscan address. [Try it out](https://www.etherface.io/hash).
 
-### Background
-Function calls in the Ethereum network are specified by the first four byte of data sent with a transaction.
-These first four bytes, also called function selector, represent the Keccak256 hash of the functions canonical form (e.g. `balanceOf(address)`).
-As an outsider it is as such impossible to interpret what a given transaction does, because hashes are one-way
-calculations. Furthermore [events](https://medium.com/mycrypto/understanding-event-logs-on-the-ethereum-blockchain-f4ae7ba50378)
-and [errors](https://blog.soliditylang.org/2021/04/21/custom-errors/) are encoded in a similar fashion. Consequently rainbow tables are
-needed to decode and inspect such signatures in the Ethereum network. While such rainbow tables exists,
-most prominently [4Byte](https://www.4byte.directory/), two features are missing which Etherface tries to cover, as mentioned above.
+## What's a signature database?
+Every transaction in Ethereum can carry additional input data, for example take the following [arbitrary transaction](https://etherscan.io/tx/0x2b930225479934eda949c3c2b0f3af5d5fd60136f7c9f0d5bbabf569def1f8a8) found on Etherscan.
+Its input data consists of  `0x095ea7b...85190000` and at first sight might look uninteresting. 
+This specific piece of data however is encoded [Keccak256](https://emn178.github.io/online-tools/keccak_256.html) hash and is essential when communicating with smart contracts. 
+Specifically the first 4 byte of this input data, i.e. `0x095ea7b3`, specify which function in the smart contract gets executed. 
+What exactly does `0x095ea7b3` translate to though, clearly some mapping between hashes and their clear-text form is needed right? 
+This is where signature databases come into play, making transactions in the network more transparent.
+For example `0x095ea7b3` has a mapping to `approve(address,uint256)`, thus we know there's a transaction between A and B interacting with the `approve` function.
 
+## Acknowlegements
+Etherface was started as the project for my bachelors thesis. I would like to thank the [Security and Privacy Lab](https://informationsecurity.uibk.ac.at/) at the University of Innsbruck and my [supervisor](https://informationsecurity.uibk.ac.at/people/michael-froewis/') for the support and inspiration.
+
+## Cite
+...
+
+# Development
+Etherface _might_ undergo a huge refactor, making the architecture async by nature and even more extensible for future website to crawl from.
+For now though the following sections describe it's current architecture and deployment instructions.
 ## Architecture
 Etherfaces architecture is kept simple for easier maintainability with three main modules, namely a `Fetcher`, `Scraper` and `REST API`. 
 * The `Fetcher` modules is responsible for finding pages (URLs) with Solidity code / signatures from various websites by either crawling (GitHub) or polling (Etherscan, 4Byte) them. These pages along other metadata are then inserted into the database.
@@ -29,7 +36,7 @@ Etherfaces architecture is kept simple for easier maintainability with three mai
 * `etherface-rest` consits of the REST API
 * `etherface-ui` consists of the NextJS webapp 
 
-The project itself is heavily documented, which can be further inspected using Rustdoc (`cargo doc --open --no-deps`)
+The project itself is heavily documented, which can be further inspected using Rustdoc via `cargo doc --open --no-deps`
 
 
 ## Installation (Development)
