@@ -13,7 +13,7 @@ This is where signature databases come into play, making transactions in the net
 For example `0x095ea7b3` has a mapping to `approve(address,uint256)`, thus we know there's a transaction between A and B interacting with the `approve` function.
 
 ## Acknowlegements
-Etherface was started as the project for my bachelors thesis. I would like to thank the [Security and Privacy Lab](https://informationsecurity.uibk.ac.at/) at the University of Innsbruck and my [supervisor](https://informationsecurity.uibk.ac.at/people/michael-froewis/') for the support and inspiration.
+Etherface was started as the project for my bachelors thesis. I would like to thank the [Security and Privacy Lab](https://informationsecurity.uibk.ac.at/) at the University of Innsbruck and my [supervisor](https://informationsecurity.uibk.ac.at/people/michael-froewis/) for the support and inspiration.
 
 ## Cite
 ...
