@@ -6,7 +6,7 @@ const Layout = ({ children }) => {
         <div>
             <Head>
                 <title>Ethereum Signature Database</title>
-                <meta name="description" content="Ethereum Signature Database to find function, event and error signatures in the Ethereum Network."/>
+                <meta name="description" content="Search for Ethereum function, event and error signatures from over 2 million unique signatures."/>
             </Head>
             <div>
                 {children}
