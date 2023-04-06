@@ -11,6 +11,7 @@ use crate::model::EtherscanContract;
 use chrono::Utc;
 use select::document::Document;
 use select::predicate::Name;
+use select::predicate::Class;
 use select::predicate::Predicate;
 use serde::Deserialize;
 
@@ -62,10 +63,10 @@ impl EtherscanClient {
             // Pick each row from https://etherscan.io/contractsVerified/ and extract their metadata
             for row in document.find(Name("tbody").child(Name("tr"))) {
                 let row_column: Vec<String> = row.find(Name("td")).into_iter().map(|x| x.text()).collect();
-
+                let address_clipboard = row.find(Name("a").and(Class("js-clipboard"))).next().unwrap();
                 contracts.push(EtherscanContract {
                     id: 0, // Can be 0 because the ID gets a value assigned by the database (SERIAL type)
-                    address: row_column[0].trim().to_string(),
+                    address: address_clipboard.attr("data-clipboard-text").unwrap().to_string(),
                     name: row_column[1].trim().to_string(),
                     compiler: row_column[2].trim().to_string(),
                     compiler_version: row_column[3].trim().to_string(),
