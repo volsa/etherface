@@ -6,11 +6,14 @@ import Navbar from '../components/Navbar'
 import SearchBar from '../components/SearchBar'
 import Table from '../components/Table'
 import { SignatureKind } from '../lib/types'
+import { useRouter } from 'next/router'
 
 
 const Text = () => {
-    const [input, setInput] = useState('')
-    const [query, setQuery] = useState('')
+    const router = useRouter()
+    const query = router.query.q?.toString() || ''
+    const setQuery = (value: string) => router.push({ query: { q: value } })
+    const [input, setInput] = useState(query)
     const [queryKind, setQueryKind] = useState<SignatureKind | null>()
     const [errorCode, setErrorCode] = useState<number | null>()
 
