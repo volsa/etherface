@@ -14,7 +14,7 @@ const Text = () => {
     const query = router.query.q?.toString() || ''
     const setQuery = (value: string) => router.push({ query: { q: value } })
     const [input, setInput] = useState(query)
-    const [queryKind, setQueryKind] = useState<SignatureKind | null>()
+    const [queryKind, setQueryKind] = useState<SignatureKind>(SignatureKind.All)
     const [errorCode, setErrorCode] = useState<number | null>()
 
     const submitHandler = (event) => {
