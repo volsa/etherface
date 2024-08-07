@@ -64,7 +64,7 @@ const Table = ({ query, queryKind, showPagination = true, fetcher, columns }) =>
                                         {columns.map((column: any) => (
                                             <td className={`py-2 px-4 ${column.style}`}
                                                 onClick={() => column.clickAction(item[column.accessor])}
-                                                key={item[column.accessor]}
+                                                key={column.accessor}
                                             >
                                                 <a href={item[column.accessorUrl]} target='_blank' rel='noreferrer'> {column.isDate ? new Date(item[column.accessor]).toDateString() : item[column.accessor]} </a>
                                             </td>
