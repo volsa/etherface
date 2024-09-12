@@ -6,13 +6,16 @@ import Navbar from '../components/Navbar'
 import SearchBar from '../components/SearchBar'
 import Table from '../components/Table'
 import { Signature, SignatureKind } from '../lib/types'
+import { useRouter } from 'next/router'
 
 
 
 const Hash = () => {
-    const [input, setInput] = useState('')
-    const [query, setQuery] = useState('')
-    const [queryKind, setQueryKind] = useState<SignatureKind | null>()
+    const router = useRouter()
+    const query = router.query.q?.toString() || ''
+    const setQuery = (value: string) => router.push({ query: { q: value } })
+    const [input, setInput] = useState(query)
+    const [queryKind, setQueryKind] = useState<SignatureKind>(SignatureKind.All)
     const [errorCode, setErrorCode] = useState<number | null>()
     const [hashCollision, setHashCollision] = useState(false)
     const [signature, setSignature] = useState<Signature | null>()
