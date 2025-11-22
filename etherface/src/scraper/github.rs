@@ -6,8 +6,8 @@
 //! repository, marking the repository as scraped. The whole process is then repeated every
 //! [`SCRAPER_SLEEP_DURATION`] seconds.
 
-use crate::scraper::SCRAPER_SLEEP_DURATION;
 use crate::scraper::Scraper;
+use crate::scraper::SCRAPER_SLEEP_DURATION;
 use anyhow::Error;
 use chrono::Utc;
 use etherface_lib::api::github::GithubClient;
@@ -16,6 +16,7 @@ use etherface_lib::model::MappingSignatureGithub;
 use etherface_lib::parser;
 use log::debug;
 use log::error;
+use log::info;
 use log::trace;
 use std::process::Command;
 use std::process::Stdio;
@@ -47,16 +48,35 @@ impl Scraper for GithubScraper {
 
         std::fs::create_dir_all(PATH_CLONE_DIR)?;
 
+        let mut previous_repo_path = None;
         loop {
             let repos = dbc.github_repository().get_unscraped_with_forks();
 
             if repos.is_empty() {
+                debug!("Sleeping {SCRAPER_SLEEP_DURATION} seconds...");
                 sleep(std::time::Duration::from_secs(SCRAPER_SLEEP_DURATION));
                 continue;
             }
 
             debug!("Scraping {} repositories...", dbc.github_repository().get_unscraped_with_forks().len());
             for repo in repos {
+                if let Some(previous_repo_path) = previous_repo_path.take() {
+                    let _ = std::fs::remove_dir_all(previous_repo_path);
+                }
+
+                if let Ok(repo) = ghc.repos(repo.id).get() {
+                    if repo.size > 5_000_000 {
+                        info!(
+                            "Repository too big ({}), ignoring (setting as scraped); {}",
+                            repo.size, repo.html_url
+                        );
+                        dbc.github_repository().set_scraped(repo.id);
+                        continue;
+                    }
+                }
+
+                debug!("Scraping {}", repo.html_url);
+
                 // Repository names within GitHub can start with a dash, which any CLI application such as `git`
                 // interprets as an argument. Hence we pre-emptively replace ALL dashes with an underscore because
                 // something like `git clone https://github.com/foo/-bar -bar` would result in an error rather
@@ -66,10 +86,13 @@ impl Scraper for GithubScraper {
                 // fancy magic (a.k.a. supporting edge-cases) we do it the simple and boring way.
                 let mut clone_name = repo.name.replace('-', "_");
                 clone_name = format!("{PATH_CLONE_DIR}/{}", clone_name.replace('.', "_"));
+                previous_repo_path = Some(clone_name.clone());
 
                 let git_clone_command = match Command::new("git")
                     .args([
                         "clone",
+                        "--depth",
+                        "1",
                         // Sometimes repositories either get deleted or made private before we have the chance to
                         // clone them; if this happens the default behaviour of git is to ask for a username and
                         // password (in case it's private and you're the owner). Hence we add a `username:password`
@@ -139,9 +162,7 @@ impl Scraper for GithubScraper {
                 }
 
                 dbc.github_repository().set_scraped(repo.id);
-                std::fs::remove_dir_all(clone_name)?;
             }
-
         }
     }
 }
